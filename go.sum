@@ -6,8 +6,8 @@ github.com/darwinOrg/go-common v0.1.55 h1:yLEnhgdwcJnkYMX5q0kTAD7Yvp46cqlTEp1hHE
 github.com/darwinOrg/go-common v0.1.55/go.mod h1:pItL/4ZV0bU64N2qD9ACpvDlYjeomAbheIzPXKqbb88=
 github.com/darwinOrg/go-logger v0.0.6 h1:d4n71HquXZV+oKJFEIGrwoidn8e/aqKaXCB/hl+lqng=
 github.com/darwinOrg/go-logger v0.0.6/go.mod h1:9zM9B+2hm8dHADsLYocsdkX2w72Q04i/4zWg9OC3WU0=
-github.com/darwinOrg/go-redis v0.0.13 h1:XAHyPZVNw1FbUzvIvSA1H2PYV8pFBI1uaAGRW1UI22c=
-github.com/darwinOrg/go-redis v0.0.13/go.mod h1:sAP3/fJE5oWBdYgX7Wx0TKOTlzPFkfwswXH6Ng1y8fE=
+github.com/darwinOrg/go-redis v0.0.15 h1:AmFlL8RD+nVWKbYiNnsMs0pAaxfky81VvcvjdBGk2lg=
+github.com/darwinOrg/go-redis v0.0.15/go.mod h1:RiFQ8RPLp13SX6vBmzx2FfpHggQNoukg4O9kCU19Qgg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
