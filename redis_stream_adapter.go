@@ -64,7 +64,7 @@ func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 				NoAck:    false,
 			})
 			if readErr != nil {
-				dglogger.Errorf(ctx, "XREADGROUP 错误 | err:%v", readErr)
+				dglogger.Errorf(ctx, "XREADGROUP 错误 |topic:%s | err:%v", topic, readErr)
 				continue
 			}
 
@@ -73,7 +73,7 @@ func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 					handlerErr := handler(ctx, xmessage.Values)
 
 					if handlerErr != nil {
-						dglogger.Errorf(ctx, "Accept Message 错误 | err:%v", handlerErr)
+						dglogger.Errorf(ctx, "Accept Message 错误 |topic:%s | err:%v", topic, handlerErr)
 						continue
 					}
 
@@ -94,7 +94,7 @@ func (a *RedisStreamAdapter) Unsubscribe(topic string) error {
 func (a *RedisStreamAdapter) Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error {
 	_, ackErr := a.RedisCli.XAck(topic, a.Group, messageId)
 	if ackErr != nil {
-		dglogger.Errorf(ctx, "Accept Message Ack 错误 | err:%v", ackErr)
+		dglogger.Errorf(ctx, "Accept Message Ack 错误 |topic:%s | err:%v", topic, ackErr)
 	}
 	return ackErr
 }
