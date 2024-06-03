@@ -58,13 +58,13 @@ func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 			xstreams, readErr := a.RedisCli.XReadGroup(&redis.XReadGroupArgs{
 				Group:    a.Group,
 				Consumer: a.Consumer,
-				Streams:  []string{topic},
+				Streams:  []string{topic, ">"},
 				Count:    a.Count,
 				Block:    a.Block,
-				NoAck:    false,
 			})
 			if readErr != nil {
 				dglogger.Errorf(ctx, "XREADGROUP 错误 |topic:%s | err:%v", topic, readErr)
+				time.Sleep(time.Second)
 				continue
 			}
 
