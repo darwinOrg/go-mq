@@ -3,7 +3,7 @@ module github.com/darwinOrg/go-mq
 go 1.19
 
 require (
-	github.com/darwinOrg/go-common v0.1.55
+	github.com/darwinOrg/go-common v0.1.56
 	github.com/darwinOrg/go-logger v0.0.6
 	github.com/darwinOrg/go-redis v0.0.15
 	github.com/google/uuid v1.6.0

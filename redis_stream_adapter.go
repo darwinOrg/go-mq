@@ -45,7 +45,10 @@ func (a *RedisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 }
 
 func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) error {
-	_, _ = a.RedisCli.XGroupCreateMkStream(topic, a.Group, "$")
+	_, err := a.RedisCli.XGroupCreateMkStream(topic, a.Group, "$")
+	if err != nil {
+		return err
+	}
 
 	go func() {
 		for {
@@ -63,7 +66,10 @@ func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 				Block:    a.Block,
 			})
 			if readErr != nil {
-				dglogger.Errorf(ctx, "XREADGROUP 错误 |topic:%s | err:%v", topic, readErr)
+				_, ok := a.closedTopics.Load(topic)
+				if !ok {
+					dglogger.Errorf(ctx, "XREADGROUP 错误 |topic:%s | err:%v", topic, readErr)
+				}
 				time.Sleep(time.Second)
 				continue
 			}
