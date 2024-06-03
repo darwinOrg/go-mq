@@ -51,6 +51,7 @@ func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 	}
 
 	go func() {
+		defer a.closedTopics.Delete(topic)
 		for {
 			ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 			_, ok := a.closedTopics.Load(topic)
