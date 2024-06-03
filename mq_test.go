@@ -28,11 +28,11 @@ func init() {
 
 func TestRedisAdapter(t *testing.T) {
 	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
-	topic := uuid.NewString()
+	topic := "test"
 	subscribeData(topic)
 	publishData(ctx, topic, []byte("hello world"))
 	publishData(ctx, topic, []byte("haha"))
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 	destroyTopic(ctx, topic)
 	time.Sleep(2 * time.Second)
 }

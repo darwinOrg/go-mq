@@ -52,12 +52,13 @@ func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 
 	go func() {
 		for {
+			ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 			_, ok := a.closedTopics.Load(topic)
 			if ok {
+				dglogger.Infof(ctx, "topic: %s, consumer: %s, group: %s, 已关闭", topic, a.Consumer, a.Group)
 				break
 			}
 
-			ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 			xstreams, readErr := a.RedisCli.XReadGroup(&redis.XReadGroupArgs{
 				Group:    a.Group,
 				Consumer: a.Consumer,
