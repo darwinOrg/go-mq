@@ -1,7 +1,6 @@
 package dgmq
 
 import (
-	"context"
 	dgctx "github.com/darwinOrg/go-common/context"
 	dglogger "github.com/darwinOrg/go-logger"
 	redisdk "github.com/darwinOrg/go-redis"
@@ -11,11 +10,23 @@ import (
 )
 
 type RedisStreamAdapter struct {
-	RedisCli redisdk.RedisCli
-	Group    string
-	Consumer string
-	Block    time.Duration
-	Count    int64
+	RedisCli     redisdk.RedisCli
+	Group        string
+	Consumer     string
+	Block        time.Duration
+	Count        int64
+	closedTopics chan string
+}
+
+func NewRedisStreamAdapter(redisCli redisdk.RedisCli, group string, consumer string, block time.Duration, count int64) *RedisStreamAdapter {
+	return &RedisStreamAdapter{
+		RedisCli:     redisCli,
+		Group:        group,
+		Consumer:     consumer,
+		Block:        block,
+		Count:        count,
+		closedTopics: make(chan string, 100),
+	}
 }
 
 func (a *RedisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
@@ -30,6 +41,7 @@ func (a *RedisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message
 }
 
 func (a *RedisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
+	a.closedTopics <- topic
 	err := a.RedisCli.Del(topic)
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
@@ -37,7 +49,7 @@ func (a *RedisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	return err
 }
 
-func (a *RedisStreamAdapter) Subscribe(ctx context.Context, topic string, handler SubscribeHandler) error {
+func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 	_, err := a.RedisCli.XGroupCreateMkStream(topic, a.Group, "$")
 	if err != nil {
 		return err
@@ -46,8 +58,10 @@ func (a *RedisStreamAdapter) Subscribe(ctx context.Context, topic string, handle
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
-				return
+			case closedTopic := <-a.closedTopics:
+				if closedTopic == topic {
+					return
+				}
 			default:
 				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
 				xstreams, readErr := a.RedisCli.XReadGroup(&redis.XReadGroupArgs{
@@ -82,6 +96,7 @@ func (a *RedisStreamAdapter) Subscribe(ctx context.Context, topic string, handle
 }
 
 func (a *RedisStreamAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
+	a.closedTopics <- topic
 	_, err := a.RedisCli.XGroupDestroy(topic, a.Group)
 	if err != nil {
 		dglogger.Errorf(ctx, "XGroupDestroy error |topic:%s | err:%v", topic, err)

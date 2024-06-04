@@ -1,7 +1,6 @@
 package dgmq
 
 import (
-	"context"
 	dgctx "github.com/darwinOrg/go-common/context"
 )
 
@@ -18,7 +17,7 @@ type Publisher interface {
 }
 
 type Subscriber interface {
-	Subscribe(ctx context.Context, topic string, handler SubscribeHandler) error
+	Subscribe(topic string, handler SubscribeHandler) error
 	Unsubscribe(ctx *dgctx.DgContext, topic string) error
 	Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error
 }
