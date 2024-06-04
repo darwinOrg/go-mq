@@ -4,7 +4,7 @@ import (
 	dgctx "github.com/darwinOrg/go-common/context"
 )
 
-type SubscribeHandler func(ctx *dgctx.DgContext, message any) error
+type SubscribeHandler func(ctx *dgctx.DgContext, message string) error
 
 type MqAdapter interface {
 	Publisher

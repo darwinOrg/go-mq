@@ -2,11 +2,17 @@ package dgmq
 
 import (
 	dgctx "github.com/darwinOrg/go-common/context"
+	"github.com/darwinOrg/go-common/utils"
 	dglogger "github.com/darwinOrg/go-logger"
 	redisdk "github.com/darwinOrg/go-redis"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"reflect"
 	"time"
+)
+
+const (
+	defaultRedisStreamKey = "###redis_stream###"
 )
 
 type redisStreamAdapter struct {
@@ -30,9 +36,27 @@ func NewRedisStreamAdapter(redisCli redisdk.RedisCli, group string, consumer str
 }
 
 func (a *redisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
+	tpe := reflect.TypeOf(message)
+	for tpe.Kind() == reflect.Pointer {
+		tpe = tpe.Elem()
+	}
+
+	var values map[string]any
+	if tpe.Kind() == reflect.String {
+		values = map[string]any{defaultRedisStreamKey: message}
+	} else {
+		jsonMsg, err := utils.ConvertBeanToJsonString(message)
+		if err != nil {
+			dglogger.Errorf(ctx, "ConvertBeanToJsonString error | topic: %s | err: %v", topic, err)
+			return err
+		}
+
+		values = map[string]any{defaultRedisStreamKey: jsonMsg}
+	}
+
 	_, err := a.redisCli.XAdd(&redis.XAddArgs{
 		Stream: topic,
-		Values: message,
+		Values: values,
 	})
 	if err != nil {
 		dglogger.Errorf(ctx, "XAdd error | topic: %s | err: %v", topic, err)
@@ -79,7 +103,8 @@ func (a *redisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 
 				for _, xstream := range xstreams {
 					for _, xmessage := range xstream.Messages {
-						handlerErr := handler(dc, xmessage.Values)
+						message := xmessage.Values[defaultRedisStreamKey].(string)
+						handlerErr := handler(dc, message)
 						if handlerErr != nil {
 							dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
 							continue
