@@ -31,7 +31,13 @@ func (a *redisListAdapter) Publish(ctx *dgctx.DgContext, topic string, message a
 	case []byte:
 		strMsg = string(message.([]byte))
 	default:
-		strMsg = utils.MustConvertBeanToJsonString(message)
+		jsonMsg, err := utils.ConvertBeanToJsonString(message)
+		if err != nil {
+			dglogger.Errorf(ctx, "ConvertBeanToJsonString error | topic: %s | err: %v", topic, err)
+			return err
+		}
+
+		strMsg = jsonMsg
 	}
 
 	_, err := a.redisCli.LPush(topic, strMsg)

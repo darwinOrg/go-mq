@@ -7,7 +7,6 @@ import (
 	redisdk "github.com/darwinOrg/go-redis"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"reflect"
 	"time"
 )
 
@@ -36,15 +35,13 @@ func NewRedisStreamAdapter(redisCli redisdk.RedisCli, group string, consumer str
 }
 
 func (a *redisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
-	tpe := reflect.TypeOf(message)
-	for tpe.Kind() == reflect.Pointer {
-		tpe = tpe.Elem()
-	}
-
 	var values map[string]any
-	if tpe.Kind() == reflect.String {
+	switch message.(type) {
+	case string:
 		values = map[string]any{defaultRedisStreamKey: message}
-	} else {
+	case []byte:
+		values = map[string]any{defaultRedisStreamKey: string(message.([]byte))}
+	default:
 		jsonMsg, err := utils.ConvertBeanToJsonString(message)
 		if err != nil {
 			dglogger.Errorf(ctx, "ConvertBeanToJsonString error | topic: %s | err: %v", topic, err)

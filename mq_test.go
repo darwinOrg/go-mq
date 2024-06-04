@@ -44,7 +44,9 @@ func TestRedisStreamAdapter(t *testing.T) {
 	})
 
 	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
-	_ = mqAdapter.Publish(dc, topic, map[string]any{"haha": "hehe"})
+	_ = mqAdapter.Publish(dc, topic, "hello")
+	_ = mqAdapter.Publish(dc, topic, []byte("world"))
+	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
 
 	time.Sleep(time.Second)
 	_ = mqAdapter.Destroy(dc, topic)
