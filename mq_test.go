@@ -17,7 +17,7 @@ var mqAdapter dgmq.MqAdapter
 
 func init() {
 	redisdk.InitClient("localhost:6379")
-	mqAdapter = &dgmq.RedisStreamAdapter{
+	mqAdapter = &dgmq.RedisListAdapter{
 		RedisCli: redisdk.GetDefaultRedisCli(),
 		Group:    "test",
 		Consumer: os.Getenv("HOSTNAME"),

@@ -1,22 +1,21 @@
 package dgmq
 
 import (
+	"context"
 	dgctx "github.com/darwinOrg/go-common/context"
 	dglogger "github.com/darwinOrg/go-logger"
 	redisdk "github.com/darwinOrg/go-redis"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"sync"
 	"time"
 )
 
 type RedisStreamAdapter struct {
-	RedisCli     redisdk.RedisCli
-	Group        string
-	Consumer     string
-	Block        time.Duration
-	Count        int64
-	closedTopics sync.Map
+	RedisCli redisdk.RedisCli
+	Group    string
+	Consumer string
+	Block    time.Duration
+	Count    int64
 }
 
 func (a *RedisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
@@ -25,67 +24,55 @@ func (a *RedisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message
 		Values: message,
 	})
 	if err != nil {
-		dglogger.Errorf(ctx, "publish message error, topic: %s, err: %v", topic, err)
-		return err
+		dglogger.Errorf(ctx, "XAdd error | topic: %s | err: %v", topic, err)
 	}
-
-	return nil
+	return err
 }
 
 func (a *RedisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	a.closedTopics.Store(topic, true)
-
 	err := a.RedisCli.Del(topic)
 	if err != nil {
-		dglogger.Errorf(ctx, "destroy topic error, topic: %s, err: %v", topic, err)
-		return err
+		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
-
-	return nil
+	return err
 }
 
-func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) error {
+func (a *RedisStreamAdapter) Subscribe(ctx context.Context, topic string, handler SubscribeHandler) error {
 	_, err := a.RedisCli.XGroupCreateMkStream(topic, a.Group, "$")
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		defer a.closedTopics.Delete(topic)
 		for {
-			ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
-			_, ok := a.closedTopics.Load(topic)
-			if ok {
-				dglogger.Infof(ctx, "topic: %s, consumer: %s, group: %s, 已关闭", topic, a.Consumer, a.Group)
-				break
-			}
-
-			xstreams, readErr := a.RedisCli.XReadGroup(&redis.XReadGroupArgs{
-				Group:    a.Group,
-				Consumer: a.Consumer,
-				Streams:  []string{topic, ">"},
-				Count:    a.Count,
-				Block:    a.Block,
-			})
-			if readErr != nil {
-				_, ok := a.closedTopics.Load(topic)
-				if !ok {
-					dglogger.Errorf(ctx, "XREADGROUP 错误 |topic:%s | err:%v", topic, readErr)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
+				xstreams, readErr := a.RedisCli.XReadGroup(&redis.XReadGroupArgs{
+					Group:    a.Group,
+					Consumer: a.Consumer,
+					Streams:  []string{topic, ">"},
+					Count:    a.Count,
+					Block:    a.Block,
+				})
+				if readErr != nil {
+					dglogger.Errorf(dc, "XReadGroup error | topic:%s | err:%v", topic, readErr)
+					time.Sleep(time.Second)
+					continue
 				}
-				time.Sleep(time.Second)
-				continue
-			}
 
-			for _, xstream := range xstreams {
-				for _, xmessage := range xstream.Messages {
-					handlerErr := handler(ctx, xmessage.Values)
+				for _, xstream := range xstreams {
+					for _, xmessage := range xstream.Messages {
+						handlerErr := handler(dc, xmessage.Values)
+						if handlerErr != nil {
+							dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
+							continue
+						}
 
-					if handlerErr != nil {
-						dglogger.Errorf(ctx, "Accept Message 错误 |topic:%s | err:%v", topic, handlerErr)
-						continue
+						_ = a.Acknowledge(dc, topic, xmessage.ID)
 					}
-
-					_ = a.Acknowledge(ctx, topic, xmessage.ID)
 				}
 			}
 		}
@@ -94,15 +81,18 @@ func (a *RedisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 	return nil
 }
 
-func (a *RedisStreamAdapter) Unsubscribe(topic string) error {
-	a.closedTopics.Store(topic, true)
-	return nil
+func (a *RedisStreamAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
+	_, err := a.RedisCli.XGroupDestroy(topic, a.Group)
+	if err != nil {
+		dglogger.Errorf(ctx, "XGroupDestroy error |topic:%s | err:%v", topic, err)
+	}
+	return err
 }
 
 func (a *RedisStreamAdapter) Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error {
-	_, ackErr := a.RedisCli.XAck(topic, a.Group, messageId)
-	if ackErr != nil {
-		dglogger.Errorf(ctx, "Accept Message Ack 错误 |topic:%s | err:%v", topic, ackErr)
+	_, err := a.RedisCli.XAck(topic, a.Group, messageId)
+	if err != nil {
+		dglogger.Errorf(ctx, "Acknowledge error |topic:%s | err:%v", topic, err)
 	}
-	return ackErr
+	return err
 }
