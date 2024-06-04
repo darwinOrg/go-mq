@@ -2,6 +2,7 @@ package dgmq
 
 import (
 	dgctx "github.com/darwinOrg/go-common/context"
+	"github.com/darwinOrg/go-common/utils"
 	dglogger "github.com/darwinOrg/go-logger"
 	redisdk "github.com/darwinOrg/go-redis"
 	"github.com/google/uuid"
@@ -23,7 +24,17 @@ func NewRedisListAdapter(redisCli redisdk.RedisCli, timeout time.Duration) MqAda
 }
 
 func (a *redisListAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
-	_, err := a.redisCli.LPush(topic, message)
+	var strMsg string
+	switch message.(type) {
+	case string:
+		strMsg = message.(string)
+	case []byte:
+		strMsg = string(message.([]byte))
+	default:
+		strMsg = utils.MustConvertBeanToJsonString(message)
+	}
+
+	_, err := a.redisCli.LPush(topic, strMsg)
 	if err != nil {
 		dglogger.Errorf(ctx, "Publish error | topic: %s | err: %v", topic, err)
 	}
