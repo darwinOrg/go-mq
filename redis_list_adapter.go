@@ -62,14 +62,14 @@ func (a *redisListAdapter) Subscribe(topic string, handler SubscribeHandler) err
 				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
 				rts, readErr := a.redisCli.BRPop(a.timeout, topic)
 				if readErr != nil {
-					dglogger.Errorf(dc, "BRPop error | topic:%s | err:%v", topic, readErr)
+					dglogger.Errorf(dc, "BRPop error | topic: %s | err: %v", topic, readErr)
 					time.Sleep(time.Second)
 					continue
 				}
 				if len(rts) == 2 {
 					handlerErr := handler(dc, rts[1])
 					if handlerErr != nil {
-						dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
+						dglogger.Errorf(dc, "Handle error | topic: %s | err: %v", topic, handlerErr)
 					}
 				}
 			}

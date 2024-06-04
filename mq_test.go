@@ -20,6 +20,7 @@ func TestRedisAdapter(t *testing.T) {
 		if len(msg) > 0 {
 			log.Print(msg)
 		}
+		time.Sleep(time.Second * 2)
 
 		return nil
 	})
@@ -31,4 +32,5 @@ func TestRedisAdapter(t *testing.T) {
 
 	time.Sleep(time.Second)
 	_ = mqAdapter.Destroy(dc, topic)
+	time.Sleep(time.Second * 5)
 }
