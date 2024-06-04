@@ -8,39 +8,38 @@ import (
 	"time"
 )
 
-type RedisListAdapter struct {
-	RedisCli     redisdk.RedisCli
-	Timeout      time.Duration
+type redisListAdapter struct {
+	redisCli     redisdk.RedisCli
+	timeout      time.Duration
 	closedTopics chan string
 }
 
-func NewRedisListAdapter(redisCli redisdk.RedisCli, timeout time.Duration) *RedisListAdapter {
-	return &RedisListAdapter{
-		RedisCli:     redisCli,
-		Timeout:      timeout,
+func NewRedisListAdapter(redisCli redisdk.RedisCli, timeout time.Duration) MqAdapter {
+	return &redisListAdapter{
+		redisCli:     redisCli,
+		timeout:      timeout,
 		closedTopics: make(chan string, 100),
 	}
 }
 
-func (a *RedisListAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
-	_, err := a.RedisCli.LPush(topic, message)
+func (a *redisListAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
+	_, err := a.redisCli.LPush(topic, message)
 	if err != nil {
 		dglogger.Errorf(ctx, "Publish error | topic: %s | err: %v", topic, err)
 	}
 	return err
 }
 
-func (a *RedisListAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
+func (a *redisListAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	a.closedTopics <- topic
-	err := a.RedisCli.Del(topic)
+	err := a.redisCli.Del(topic)
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
-
 	}
 	return err
 }
 
-func (a *RedisListAdapter) Subscribe(topic string, handler SubscribeHandler) error {
+func (a *redisListAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 	go func() {
 		for {
 			select {
@@ -50,7 +49,7 @@ func (a *RedisListAdapter) Subscribe(topic string, handler SubscribeHandler) err
 				}
 			default:
 				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
-				rts, readErr := a.RedisCli.BRPop(a.Timeout, topic)
+				rts, readErr := a.redisCli.BRPop(a.timeout, topic)
 				if readErr != nil {
 					dglogger.Errorf(dc, "BRPop error | topic:%s | err:%v", topic, readErr)
 					time.Sleep(time.Second)
@@ -69,10 +68,10 @@ func (a *RedisListAdapter) Subscribe(topic string, handler SubscribeHandler) err
 	return nil
 }
 
-func (a *RedisListAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
+func (a *redisListAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
 	return nil
 }
 
-func (a *RedisListAdapter) Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error {
+func (a *redisListAdapter) Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error {
 	return nil
 }
