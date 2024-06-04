@@ -60,7 +60,6 @@ func (a *RedisListAdapter) Subscribe(topic string, handler SubscribeHandler) err
 					handlerErr := handler(dc, rts[1])
 					if handlerErr != nil {
 						dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
-						continue
 					}
 				}
 			}
