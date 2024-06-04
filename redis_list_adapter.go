@@ -56,6 +56,8 @@ func (a *redisListAdapter) Subscribe(topic string, handler SubscribeHandler) err
 			select {
 			case closedTopic := <-a.closedTopics:
 				if closedTopic == topic {
+					dc := &dgctx.DgContext{TraceId: uuid.NewString()}
+					dglogger.Infof(dc, "closed topic: %s ", topic)
 					return
 				}
 			default:
