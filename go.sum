@@ -6,8 +6,6 @@ github.com/darwinOrg/go-common v0.1.56 h1:05XRle3HPQOC+7Ba2nd1bekl+tbnt4ORZ7v8Bl
 github.com/darwinOrg/go-common v0.1.56/go.mod h1:pItL/4ZV0bU64N2qD9ACpvDlYjeomAbheIzPXKqbb88=
 github.com/darwinOrg/go-logger v0.0.6 h1:d4n71HquXZV+oKJFEIGrwoidn8e/aqKaXCB/hl+lqng=
 github.com/darwinOrg/go-logger v0.0.6/go.mod h1:9zM9B+2hm8dHADsLYocsdkX2w72Q04i/4zWg9OC3WU0=
-github.com/darwinOrg/go-redis v0.0.17 h1:l3kdCDZJTzmgyhJPa1+EZyDhcMI79q4hddI4xY5F4pk=
-github.com/darwinOrg/go-redis v0.0.17/go.mod h1:RiFQ8RPLp13SX6vBmzx2FfpHggQNoukg4O9kCU19Qgg=
 github.com/darwinOrg/go-redis v0.0.18 h1:9u5kRdbTL2oDBbSWlL7Jwd4tZdKDDLBCwSoK/+Nx3y0=
 github.com/darwinOrg/go-redis v0.0.18/go.mod h1:RiFQ8RPLp13SX6vBmzx2FfpHggQNoukg4O9kCU19Qgg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
