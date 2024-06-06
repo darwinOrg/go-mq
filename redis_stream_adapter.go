@@ -88,12 +88,12 @@ func (a *redisStreamAdapter) DynamicSubscribe(topic string, handler SubscribeHan
 		return nil, err
 	}
 
-	closeChan := make(chan struct{})
+	closeCh := make(chan struct{})
 
 	go func() {
 		for {
 			select {
-			case <-closeChan:
+			case <-closeCh:
 				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
 				dglogger.Infof(dc, "closed topic: %s ", topic)
 				return
@@ -103,7 +103,7 @@ func (a *redisStreamAdapter) DynamicSubscribe(topic string, handler SubscribeHan
 		}
 	}()
 
-	return closeChan, nil
+	return closeCh, nil
 }
 
 func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
