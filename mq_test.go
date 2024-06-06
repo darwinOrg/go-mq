@@ -16,11 +16,14 @@ func TestRedisListAdapter(t *testing.T) {
 	mqAdapter := dgmq.NewRedisListAdapter(redisdk.GetDefaultRedisCli(), time.Minute)
 	topic := "test"
 
-	_ = mqAdapter.Subscribe(topic, func(_ *dgctx.DgContext, message string) error {
+	closeChan, err := mqAdapter.DynamicSubscribe(topic, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
 		return nil
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
 	_ = mqAdapter.Publish(dc, topic, "hello")
@@ -28,8 +31,10 @@ func TestRedisListAdapter(t *testing.T) {
 	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
 
 	time.Sleep(time.Second)
+	//closeChan <- struct{}{}
+	close(closeChan)
+	time.Sleep(time.Second)
 	_ = mqAdapter.Destroy(dc, topic)
-	time.Sleep(time.Second * 5)
 }
 
 func TestRedisStreamAdapter(t *testing.T) {
@@ -37,11 +42,14 @@ func TestRedisStreamAdapter(t *testing.T) {
 	mqAdapter := dgmq.NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), "test", os.Getenv("HOSTNAME"), 0, 10)
 	topic := "test"
 
-	_ = mqAdapter.Subscribe(topic, func(_ *dgctx.DgContext, message string) error {
+	closeChan, err := mqAdapter.DynamicSubscribe(topic, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
 		return nil
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
 	_ = mqAdapter.Publish(dc, topic, "hello")
@@ -49,6 +57,6 @@ func TestRedisStreamAdapter(t *testing.T) {
 	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
 
 	time.Sleep(time.Second)
+	close(closeChan)
 	_ = mqAdapter.Destroy(dc, topic)
-	time.Sleep(time.Second * 5)
 }

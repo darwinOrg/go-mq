@@ -15,22 +15,20 @@ const (
 )
 
 type redisStreamAdapter struct {
-	redisCli     redisdk.RedisCli
-	group        string
-	consumer     string
-	block        time.Duration
-	count        int64
-	closedTopics chan string
+	redisCli redisdk.RedisCli
+	group    string
+	consumer string
+	block    time.Duration
+	count    int64
 }
 
 func NewRedisStreamAdapter(redisCli redisdk.RedisCli, group string, consumer string, block time.Duration, count int64) MqAdapter {
 	return &redisStreamAdapter{
-		redisCli:     redisCli,
-		group:        group,
-		consumer:     consumer,
-		block:        block,
-		count:        count,
-		closedTopics: make(chan string, 100),
+		redisCli: redisCli,
+		group:    group,
+		consumer: consumer,
+		block:    block,
+		count:    count,
 	}
 }
 
@@ -62,7 +60,6 @@ func (a *redisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message
 }
 
 func (a *redisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	a.closedTopics <- topic
 	err := a.redisCli.Del(topic)
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
@@ -78,47 +75,69 @@ func (a *redisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 
 	go func() {
 		for {
-			select {
-			case closedTopic := <-a.closedTopics:
-				if closedTopic == topic {
-					return
-				}
-			default:
-				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
-				xstreams, readErr := a.redisCli.XReadGroup(&redis.XReadGroupArgs{
-					Group:    a.group,
-					Consumer: a.consumer,
-					Streams:  []string{topic, ">"},
-					Count:    a.count,
-					Block:    a.block,
-				})
-				if readErr != nil {
-					dglogger.Errorf(dc, "XReadGroup error | topic:%s | err:%v", topic, readErr)
-					time.Sleep(time.Second)
-					continue
-				}
-
-				for _, xstream := range xstreams {
-					for _, xmessage := range xstream.Messages {
-						message := xmessage.Values[defaultRedisStreamKey].(string)
-						handlerErr := handler(dc, message)
-						if handlerErr != nil {
-							dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
-							continue
-						}
-
-						_ = a.Acknowledge(dc, topic, xmessage.ID)
-					}
-				}
-			}
+			a.subscribe(topic, handler)
 		}
 	}()
 
 	return nil
 }
 
+func (a *redisStreamAdapter) DynamicSubscribe(topic string, handler SubscribeHandler) (chan struct{}, error) {
+	_, err := a.redisCli.XGroupCreateMkStream(topic, a.group, "$")
+	if err != nil {
+		return nil, err
+	}
+
+	closeChan := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-closeChan:
+				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
+				dglogger.Infof(dc, "closed topic: %s ", topic)
+				return
+			default:
+				a.subscribe(topic, handler)
+			}
+		}
+	}()
+
+	return closeChan, nil
+}
+
+func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
+	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
+	xstreams, readErr := a.redisCli.XReadGroup(&redis.XReadGroupArgs{
+		Group:    a.group,
+		Consumer: a.consumer,
+		Streams:  []string{topic, ">"},
+		Count:    a.count,
+		Block:    a.block,
+	})
+	if readErr != nil {
+		dglogger.Errorf(dc, "XReadGroup error | topic:%s | err:%v", topic, readErr)
+		time.Sleep(time.Second)
+		return
+	}
+
+	for _, xstream := range xstreams {
+		for _, xmessage := range xstream.Messages {
+			message := xmessage.Values[defaultRedisStreamKey].(string)
+			handlerErr := handler(dc, message)
+			if handlerErr != nil {
+				dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
+				continue
+			}
+
+			_ = a.Acknowledge(dc, topic, xmessage.ID)
+		}
+	}
+
+	return
+}
+
 func (a *redisStreamAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
-	a.closedTopics <- topic
 	_, err := a.redisCli.XGroupDestroy(topic, a.group)
 	if err != nil {
 		dglogger.Errorf(ctx, "XGroupDestroy error |topic:%s | err:%v", topic, err)
