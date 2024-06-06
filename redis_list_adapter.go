@@ -84,7 +84,7 @@ func (a *redisListAdapter) subscribe(topic string, handler SubscribeHandler) {
 	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
 	rts, readErr := a.redisCli.BRPop(a.timeout, topic)
 	if readErr != nil {
-		dglogger.Errorf(dc, "BRPop error | topic: %s | err: %v", topic, readErr)
+		dglogger.Debugf(dc, "BRPop error | topic: %s | err: %v", topic, readErr)
 		time.Sleep(time.Second)
 		return
 	}

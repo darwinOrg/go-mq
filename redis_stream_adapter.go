@@ -121,7 +121,10 @@ func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
 
 	for _, xstream := range xstreams {
 		for _, xmessage := range xstream.Messages {
-			message := xmessage.Values[defaultRedisStreamKey].(string)
+			message, ok := xmessage.Values[defaultRedisStreamKey].(string)
+			if !ok {
+				continue
+			}
 			handlerErr := handler(dc, message)
 			if handlerErr != nil {
 				dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
