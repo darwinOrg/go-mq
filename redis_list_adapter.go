@@ -63,9 +63,7 @@ func (a *redisListAdapter) Subscribe(topic string, handler SubscribeHandler) err
 	return nil
 }
 
-func (a *redisListAdapter) DynamicSubscribe(topic string, handler SubscribeHandler) (chan struct{}, error) {
-	closeCh := make(chan struct{})
-
+func (a *redisListAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	go func() {
 		for {
 			select {
@@ -79,7 +77,7 @@ func (a *redisListAdapter) DynamicSubscribe(topic string, handler SubscribeHandl
 		}
 	}()
 
-	return closeCh, nil
+	return nil
 }
 
 func (a *redisListAdapter) subscribe(topic string, handler SubscribeHandler) {

@@ -82,13 +82,11 @@ func (a *redisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 	return nil
 }
 
-func (a *redisStreamAdapter) DynamicSubscribe(topic string, handler SubscribeHandler) (chan struct{}, error) {
+func (a *redisStreamAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	_, err := a.redisCli.XGroupCreateMkStream(topic, a.group, "$")
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	closeCh := make(chan struct{})
 
 	go func() {
 		for {
@@ -103,7 +101,7 @@ func (a *redisStreamAdapter) DynamicSubscribe(topic string, handler SubscribeHan
 		}
 	}()
 
-	return closeCh, nil
+	return nil
 }
 
 func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
