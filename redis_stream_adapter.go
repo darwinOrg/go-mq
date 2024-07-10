@@ -131,25 +131,12 @@ func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
 				continue
 			}
 
-			_ = a.Acknowledge(dc, topic, xmessage.ID)
+			_, err := a.redisCli.XAck(topic, a.group, xmessage.ID)
+			if err != nil {
+				dglogger.Errorf(dc, "Acknowledge error |topic:%s | err:%v", topic, err)
+			}
 		}
 	}
 
 	return
-}
-
-func (a *redisStreamAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
-	_, err := a.redisCli.XGroupDestroy(topic, a.group)
-	if err != nil {
-		dglogger.Errorf(ctx, "XGroupDestroy error |topic:%s | err:%v", topic, err)
-	}
-	return err
-}
-
-func (a *redisStreamAdapter) Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error {
-	_, err := a.redisCli.XAck(topic, a.group, messageId)
-	if err != nil {
-		dglogger.Errorf(ctx, "Acknowledge error |topic:%s | err:%v", topic, err)
-	}
-	return err
 }

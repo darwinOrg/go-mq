@@ -19,6 +19,4 @@ type Publisher interface {
 type Subscriber interface {
 	Subscribe(topic string, handler SubscribeHandler) error
 	DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error
-	Unsubscribe(ctx *dgctx.DgContext, topic string) error
-	Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error
 }

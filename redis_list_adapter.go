@@ -95,11 +95,3 @@ func (a *redisListAdapter) subscribe(topic string, handler SubscribeHandler) {
 		}
 	}
 }
-
-func (a *redisListAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
-	return nil
-}
-
-func (a *redisListAdapter) Acknowledge(ctx *dgctx.DgContext, topic string, messageId string) error {
-	return nil
-}

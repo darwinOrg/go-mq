@@ -8,6 +8,12 @@ github.com/darwinOrg/go-logger v0.0.6 h1:d4n71HquXZV+oKJFEIGrwoidn8e/aqKaXCB/hl+
 github.com/darwinOrg/go-logger v0.0.6/go.mod h1:9zM9B+2hm8dHADsLYocsdkX2w72Q04i/4zWg9OC3WU0=
 github.com/darwinOrg/go-redis v0.0.18 h1:9u5kRdbTL2oDBbSWlL7Jwd4tZdKDDLBCwSoK/+Nx3y0=
 github.com/darwinOrg/go-redis v0.0.18/go.mod h1:RiFQ8RPLp13SX6vBmzx2FfpHggQNoukg4O9kCU19Qgg=
+github.com/darwinOrg/smss-client v0.0.1 h1:mJ9Uvh2A2tc3Nc+1mv+iSUU/i2CouA0YFqhmlI8D7DA=
+github.com/darwinOrg/smss-client v0.0.1/go.mod h1:OvxTwgLTK6egjDmg6vBNaCHfZlp7e8kro+s/AZf1ce0=
+github.com/darwinOrg/smss-client v0.0.2 h1:1D2mGrRfngUmZw5vu5kUcUX9OkOrsNdKdmRyaILGpUU=
+github.com/darwinOrg/smss-client v0.0.2/go.mod h1:OvxTwgLTK6egjDmg6vBNaCHfZlp7e8kro+s/AZf1ce0=
+github.com/darwinOrg/smss-client v0.0.3 h1:q4VHjrZVpVpO+p7tH7vxjQeVVeSyok2CYnePHVEOLhQ=
+github.com/darwinOrg/smss-client v0.0.3/go.mod h1:OvxTwgLTK6egjDmg6vBNaCHfZlp7e8kro+s/AZf1ce0=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
