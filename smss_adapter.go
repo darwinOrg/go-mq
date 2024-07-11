@@ -7,19 +7,20 @@ import (
 	dglogger "github.com/darwinOrg/go-logger"
 	client "github.com/darwinOrg/smss-client"
 	"github.com/google/uuid"
+	"sync/atomic"
 	"time"
 )
 
 type smssAdapter struct {
 	host      string
 	port      int
-	consumer  string
+	group     string
 	batchSize uint8
 	timeout   time.Duration
 	pubClient *client.PubClient
 }
 
-func NewSmssAdapter(host string, port int, consumer string, batchSize uint8, timeout time.Duration) (MqAdapter, error) {
+func NewSmssAdapter(host string, port int, group string, batchSize uint8, timeout time.Duration) (MqAdapter, error) {
 	pubClient, err := client.NewPubClient(host, port, timeout)
 	if err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func NewSmssAdapter(host string, port int, consumer string, batchSize uint8, tim
 	return &smssAdapter{
 		host:      host,
 		port:      port,
-		consumer:  consumer,
+		group:     group,
 		batchSize: batchSize,
 		timeout:   timeout,
 		pubClient: pubClient,
@@ -71,22 +72,29 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 }
 
 func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
-	subClient, err := client.NewSubClient(topic, a.consumer, a.host, a.port, a.timeout)
+	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
 	if err != nil {
 		ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
+		return err
 	}
 
 	go func() {
 		defer subClient.Close()
-		a.subscribe(subClient, topic, handler)
+		a.subscribe(nil, subClient, topic, handler)
 	}()
 
 	return nil
 }
 
 func (a *smssAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	subClient, err := client.NewSubClient(topic, a.consumer, a.host, a.port, a.timeout)
+	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
+	err := a.pubClient.CreateMQ(topic, 0, ctx.TraceId)
+	if err != nil {
+		dglogger.Errorf(ctx, "pubClient.CreateMQ error | topic: %s | err: %v", topic, err)
+		return err
+	}
+	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
 	if err != nil {
 		ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
@@ -94,32 +102,23 @@ func (a *smssAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, hand
 
 	go func() {
 		defer subClient.Close()
-
-		go func() {
-			for {
-				select {
-				case <-closeCh:
-					ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
-					err = a.pubClient.DeleteMQ(topic, ctx.TraceId)
-					if err != nil {
-						dglogger.Errorf(ctx, "DeleteMQ error | topic: %s | err: %v", topic, err)
-					}
-
-					dglogger.Infof(ctx, "closed topic: %s ", topic)
-					return
-				default:
-					time.Sleep(time.Second)
-				}
-			}
-		}()
-
-		a.subscribe(subClient, topic, handler)
+		a.subscribe(closeCh, subClient, topic, handler)
 	}()
 
 	return nil
 }
 
-func (a *smssAdapter) subscribe(subClient *client.SubClient, topic string, handler SubscribeHandler) {
+func (a *smssAdapter) subscribe(closeCh chan struct{}, subClient *client.SubClient, topic string, handler SubscribeHandler) {
+	end := new(atomic.Bool)
+	end.Store(false)
+
+	if closeCh != nil {
+		go func() {
+			<-closeCh
+			end.Store(true)
+		}()
+	}
+
 	err := subClient.Sub(0, a.batchSize, a.timeout, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
 			traceId := msg.GetHeaderValue(constants.TraceId)
@@ -128,14 +127,12 @@ func (a *smssAdapter) subscribe(subClient *client.SubClient, topic string, handl
 			handlerErr := handler(ctx, message)
 			if handlerErr != nil {
 				dglogger.Errorf(ctx, "Handle fail | topic: %s | ts: %d | eventId: %d | message: %s | err: %v", topic, msg.Ts, msg.EventId, message, handlerErr)
-				return client.ActWithTermite
 			} else {
 				dglogger.Debugf(ctx, "Handle success | topic: %s | ts: %d | eventId: %d | message: %s", topic, msg.Ts, msg.EventId, message)
 			}
 		}
-		return client.Ack
+		return utils.IfReturn(end.Load(), client.ActWithEnd, client.Ack)
 	})
-
 	if err != nil {
 		ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
