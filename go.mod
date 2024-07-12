@@ -8,7 +8,7 @@ require (
 	github.com/darwinOrg/go-redis v0.0.18
 	github.com/darwinOrg/smss-client v0.0.5
 	github.com/google/uuid v1.6.0
-	github.com/redis/go-redis/v9 v9.5.3
+	github.com/redis/go-redis/v9 v9.5.4
 )
 
 require (
