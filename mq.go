@@ -25,13 +25,13 @@ type Subscriber interface {
 }
 
 const (
-	MqAdapterRedisList = iota
-	MqAdapterRedisStream
-	MqAdapterSmss
+	MqAdapterRedisList   = "redis_list"
+	MqAdapterRedisStream = "redis_stream"
+	MqAdapterSmss        = "smss"
 )
 
 type MqAdapterConfig struct {
-	Type      int           `json:"type" mapstructure:"type"`
+	Type      string        `json:"type" mapstructure:"type"`
 	Host      string        `json:"host" mapstructure:"host"`
 	Port      int           `json:"port" mapstructure:"port"`
 	Timeout   time.Duration `json:"timeout" mapstructure:"timeout"`
