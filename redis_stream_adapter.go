@@ -15,20 +15,20 @@ const (
 )
 
 type redisStreamAdapter struct {
-	redisCli redisdk.RedisCli
-	group    string
-	consumer string
-	block    time.Duration
-	count    int64
+	redisCli  redisdk.RedisCli
+	group     string
+	consumer  string
+	timeout   time.Duration
+	batchSize int64
 }
 
-func NewRedisStreamAdapter(redisCli redisdk.RedisCli, group string, consumer string, block time.Duration, count int64) MqAdapter {
+func NewRedisStreamAdapter(redisCli redisdk.RedisCli, group string, consumer string, timeout time.Duration, batchSize int64) MqAdapter {
 	return &redisStreamAdapter{
-		redisCli: redisCli,
-		group:    group,
-		consumer: consumer,
-		block:    block,
-		count:    count,
+		redisCli:  redisCli,
+		group:     group,
+		consumer:  consumer,
+		timeout:   timeout,
+		batchSize: batchSize,
 	}
 }
 
@@ -110,8 +110,8 @@ func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
 		Group:    a.group,
 		Consumer: a.consumer,
 		Streams:  []string{topic, ">"},
-		Count:    a.count,
-		Block:    a.block,
+		Count:    a.batchSize,
+		Block:    a.timeout,
 	})
 	if readErr != nil {
 		dglogger.Errorf(dc, "XReadGroup error | topic:%s | err:%v", topic, readErr)
