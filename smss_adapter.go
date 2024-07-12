@@ -14,29 +14,29 @@ import (
 )
 
 type smssAdapter struct {
+	redisCli  redisdk.RedisCli
 	host      string
 	port      int
 	timeout   time.Duration
 	group     string
 	batchSize uint8
 	pubClient *client.PubClient
-	redisCli  redisdk.RedisCli
 }
 
-func NewSmssAdapter(host string, port int, timeout time.Duration, poolSize int, group string, batchSize uint8, redisCli redisdk.RedisCli) (MqAdapter, error) {
-	pubClient, err := client.NewPubClient(host, port, timeout, poolSize)
+func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapter, error) {
+	pubClient, err := client.NewPubClient(config.Host, config.Port, config.Timeout, config.PoolSize)
 	if err != nil {
 		return nil, err
 	}
 
 	return &smssAdapter{
-		host:      host,
-		port:      port,
-		timeout:   timeout,
-		group:     group,
-		batchSize: batchSize,
-		pubClient: pubClient,
 		redisCli:  redisCli,
+		host:      config.Host,
+		port:      config.Port,
+		timeout:   config.Timeout,
+		group:     config.Group,
+		batchSize: uint8(config.BatchSize),
+		pubClient: pubClient,
 	}, nil
 }
 
@@ -72,7 +72,7 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
-	_ = a.redisCli.Del(topic)
+	_ = a.redisCli.Del(getSmssEventIdKey(topic))
 	return err
 }
 
@@ -123,11 +123,11 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		}()
 	}
 
-	eventIdKey := "smssid_" + topic
+	eventIdKey := getSmssEventIdKey(topic)
 	var eventId int64
 	strEventId, err := a.redisCli.Get(eventIdKey)
 	if err != nil {
-		dglogger.Errorf(ctx, "redisCli get smss eventid error | topic: %s | err: %v", topic, err)
+		dglogger.Warnf(ctx, "redisCli get smss eventid error | topic: %s | err: %v", topic, err)
 	} else {
 		eventId, _ = strconv.ParseInt(strEventId, 10, 64)
 	}
@@ -150,4 +150,8 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 	if err != nil {
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
 	}
+}
+
+func getSmssEventIdKey(topic string) string {
+	return "smssid_" + topic
 }

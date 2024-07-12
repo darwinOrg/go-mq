@@ -14,10 +14,10 @@ type redisListAdapter struct {
 	timeout  time.Duration
 }
 
-func NewRedisListAdapter(redisCli redisdk.RedisCli, timeout time.Duration) MqAdapter {
+func NewRedisListAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) MqAdapter {
 	return &redisListAdapter{
 		redisCli: redisCli,
-		timeout:  timeout,
+		timeout:  config.Timeout,
 	}
 }
 

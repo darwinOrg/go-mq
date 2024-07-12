@@ -45,11 +45,15 @@ func NewMqAdapter(config *MqAdapterConfig) (MqAdapter, error) {
 	var mqAdapter MqAdapter
 	switch config.Type {
 	case MqAdapterRedisList:
-		mqAdapter = NewRedisListAdapter(redisdk.GetDefaultRedisCli(), config.Timeout)
+		mqAdapter = NewRedisListAdapter(redisdk.GetDefaultRedisCli(), config)
 	case MqAdapterRedisStream:
-		mqAdapter = NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), config.Group, config.Consumer, config.Timeout, config.BatchSize)
+		mqAdapter = NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), config)
 	case MqAdapterSmss:
-		mqAdapter, _ = NewSmssAdapter(config.Host, config.Port, config.Timeout, config.PoolSize, config.Group, uint8(config.BatchSize), redisdk.GetDefaultRedisCli())
+		var err error
+		mqAdapter, err = NewSmssAdapter(redisdk.GetDefaultRedisCli(), config)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.New("错误的类型")
 	}

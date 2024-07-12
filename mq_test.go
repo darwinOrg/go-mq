@@ -17,7 +17,7 @@ func TestRedisListAdapter(t *testing.T) {
 		Type:    dgmq.MqAdapterRedisList,
 		Timeout: time.Minute,
 	})
-	pubAndSub(mqAdapter)
+	pubAndSub(mqAdapter, "redis_list_topic")
 }
 
 func TestRedisStreamAdapter(t *testing.T) {
@@ -29,7 +29,7 @@ func TestRedisStreamAdapter(t *testing.T) {
 		Consumer:  os.Getenv("HOSTNAME"),
 		BatchSize: 10,
 	})
-	pubAndSub(mqAdapter)
+	pubAndSub(mqAdapter, "redis_stream_topic")
 }
 
 func TestSmssAdapter(t *testing.T) {
@@ -43,11 +43,10 @@ func TestSmssAdapter(t *testing.T) {
 		Group:     "test",
 		BatchSize: 10,
 	})
-	pubAndSub(mqAdapter)
+	pubAndSub(mqAdapter, "smss_topic")
 }
 
-func pubAndSub(mqAdapter dgmq.MqAdapter) {
-	topic := "test"
+func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	closeCh := make(chan struct{})
 	err := mqAdapter.DynamicSubscribe(closeCh, topic, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
@@ -66,5 +65,5 @@ func pubAndSub(mqAdapter dgmq.MqAdapter) {
 	time.Sleep(time.Second)
 	close(closeCh)
 	time.Sleep(time.Second)
-	//_ = mqAdapter.Destroy(dc, topic)
+	_ = mqAdapter.Destroy(dc, topic)
 }
