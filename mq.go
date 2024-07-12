@@ -1,7 +1,10 @@
 package dgmq
 
 import (
+	"errors"
 	dgctx "github.com/darwinOrg/go-common/context"
+	redisdk "github.com/darwinOrg/go-redis"
+	"time"
 )
 
 type SubscribeHandler func(ctx *dgctx.DgContext, message string) error
@@ -19,4 +22,37 @@ type Publisher interface {
 type Subscriber interface {
 	Subscribe(topic string, handler SubscribeHandler) error
 	DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error
+}
+
+const (
+	MqAdapterRedisList = iota
+	MqAdapterRedisStream
+	MqAdapterSmss
+)
+
+type MqAdapterConfig struct {
+	Type      int           `json:"type" mapstructure:"type"`
+	Host      string        `json:"host" mapstructure:"host"`
+	Port      int           `json:"port" mapstructure:"port"`
+	Timeout   time.Duration `json:"timeout" mapstructure:"timeout"`
+	PoolSize  int           `json:"poolSize" mapstructure:"poolSize"`
+	Group     string        `json:"group" mapstructure:"group"`
+	Consumer  string        `json:"consumer" mapstructure:"consumer"`
+	BatchSize int64         `json:"batchSize" mapstructure:"batchSize"`
+}
+
+func NewMqAdapter(config *MqAdapterConfig) (MqAdapter, error) {
+	var mqAdapter MqAdapter
+	switch config.Type {
+	case MqAdapterRedisList:
+		mqAdapter = NewRedisListAdapter(redisdk.GetDefaultRedisCli(), config.Timeout)
+	case MqAdapterRedisStream:
+		mqAdapter = NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), config.Group, config.Consumer, config.Timeout, config.BatchSize)
+	case MqAdapterSmss:
+		mqAdapter, _ = NewSmssAdapter(config.Host, config.Port, config.Timeout, config.PoolSize, config.Group, uint8(config.BatchSize), redisdk.GetDefaultRedisCli())
+	default:
+		return nil, errors.New("错误的类型")
+	}
+
+	return mqAdapter, nil
 }

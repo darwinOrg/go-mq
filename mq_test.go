@@ -13,22 +13,36 @@ import (
 
 func TestRedisListAdapter(t *testing.T) {
 	redisdk.InitClient("localhost:6379")
-	mqAdapter := dgmq.NewRedisListAdapter(redisdk.GetDefaultRedisCli(), time.Minute)
+	mqAdapter, _ := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
+		Type:    dgmq.MqAdapterRedisList,
+		Timeout: time.Minute,
+	})
 	pubAndSub(mqAdapter)
 }
 
 func TestRedisStreamAdapter(t *testing.T) {
 	redisdk.InitClient("localhost:6379")
-	mqAdapter := dgmq.NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), "test", os.Getenv("HOSTNAME"), 0, 10)
+	mqAdapter, _ := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
+		Type:      dgmq.MqAdapterRedisStream,
+		Timeout:   0,
+		Group:     "test",
+		Consumer:  os.Getenv("HOSTNAME"),
+		BatchSize: 10,
+	})
 	pubAndSub(mqAdapter)
 }
 
 func TestSmssAdapter(t *testing.T) {
 	redisdk.InitClient("localhost:6379")
-	mqAdapter, err := dgmq.NewSmssAdapter("localhost", 12301, time.Second*5, 20, os.Getenv("HOSTNAME"), 5, redisdk.GetDefaultRedisCli())
-	if err != nil {
-		panic(err)
-	}
+	mqAdapter, _ := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
+		Type:      dgmq.MqAdapterSmss,
+		Host:      "localhost",
+		Port:      12301,
+		Timeout:   time.Second * 5,
+		PoolSize:  20,
+		Group:     "test",
+		BatchSize: 10,
+	})
 	pubAndSub(mqAdapter)
 }
 
