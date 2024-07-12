@@ -52,5 +52,5 @@ func pubAndSub(mqAdapter dgmq.MqAdapter) {
 	time.Sleep(time.Second)
 	close(closeCh)
 	time.Sleep(time.Second)
-	_ = mqAdapter.Destroy(dc, topic)
+	//_ = mqAdapter.Destroy(dc, topic)
 }
