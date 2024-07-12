@@ -5,8 +5,10 @@ import (
 	dgctx "github.com/darwinOrg/go-common/context"
 	"github.com/darwinOrg/go-common/utils"
 	dglogger "github.com/darwinOrg/go-logger"
+	redisdk "github.com/darwinOrg/go-redis"
 	client "github.com/darwinOrg/smss-client"
 	"github.com/google/uuid"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -14,14 +16,15 @@ import (
 type smssAdapter struct {
 	host      string
 	port      int
+	timeout   time.Duration
 	group     string
 	batchSize uint8
-	timeout   time.Duration
 	pubClient *client.PubClient
+	redisCli  redisdk.RedisCli
 }
 
-func NewSmssAdapter(host string, port int, group string, batchSize uint8, timeout time.Duration) (MqAdapter, error) {
-	pubClient, err := client.NewPubClient(host, port, timeout)
+func NewSmssAdapter(host string, port int, timeout time.Duration, poolSize int, group string, batchSize uint8, redisCli redisdk.RedisCli) (MqAdapter, error) {
+	pubClient, err := client.NewPubClient(host, port, timeout, poolSize)
 	if err != nil {
 		return nil, err
 	}
@@ -29,10 +32,11 @@ func NewSmssAdapter(host string, port int, group string, batchSize uint8, timeou
 	return &smssAdapter{
 		host:      host,
 		port:      port,
+		timeout:   timeout,
 		group:     group,
 		batchSize: batchSize,
-		timeout:   timeout,
 		pubClient: pubClient,
+		redisCli:  redisCli,
 	}, nil
 }
 
@@ -68,20 +72,21 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
+	_ = a.redisCli.Del(topic)
 	return err
 }
 
 func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
+	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
 	if err != nil {
-		ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
 		return err
 	}
 
 	go func() {
 		defer subClient.Close()
-		a.subscribe(nil, subClient, topic, handler)
+		a.subscribe(ctx, nil, subClient, topic, handler)
 	}()
 
 	return nil
@@ -89,26 +94,25 @@ func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 
 func (a *smssAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
-	err := a.pubClient.CreateMQ(topic, 0, ctx.TraceId)
+	err := a.pubClient.CreateMQ(topic, time.Now().Add(8*time.Hour).UnixMilli(), ctx.TraceId)
 	if err != nil {
 		dglogger.Errorf(ctx, "pubClient.CreateMQ error | topic: %s | err: %v", topic, err)
 		return err
 	}
 	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
 	if err != nil {
-		ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
 	}
 
 	go func() {
 		defer subClient.Close()
-		a.subscribe(closeCh, subClient, topic, handler)
+		a.subscribe(ctx, closeCh, subClient, topic, handler)
 	}()
 
 	return nil
 }
 
-func (a *smssAdapter) subscribe(closeCh chan struct{}, subClient *client.SubClient, topic string, handler SubscribeHandler) {
+func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, subClient *client.SubClient, topic string, handler SubscribeHandler) {
 	end := new(atomic.Bool)
 	end.Store(false)
 
@@ -119,22 +123,31 @@ func (a *smssAdapter) subscribe(closeCh chan struct{}, subClient *client.SubClie
 		}()
 	}
 
-	err := subClient.Sub(0, a.batchSize, a.timeout, func(messages []*client.SubMessage) client.AckEnum {
+	eventIdKey := "smssid_" + topic
+	var eventId int64
+	strEventId, err := a.redisCli.Get(eventIdKey)
+	if err != nil {
+		dglogger.Errorf(ctx, "redisCli get smss eventid error | topic: %s | err: %v", topic, err)
+	} else {
+		eventId, _ = strconv.ParseInt(strEventId, 10, 64)
+	}
+
+	err = subClient.Sub(eventId, a.batchSize, a.timeout, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
 			traceId := msg.GetHeaderValue(constants.TraceId)
-			ctx := &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
+			dc := &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
 			message := string(msg.ToBytes())
-			handlerErr := handler(ctx, message)
+			handlerErr := handler(dc, message)
 			if handlerErr != nil {
-				dglogger.Errorf(ctx, "Handle fail | topic: %s | ts: %d | eventId: %d | message: %s | err: %v", topic, msg.Ts, msg.EventId, message, handlerErr)
+				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | message: %s | err: %v", topic, msg.Ts, msg.EventId, message, handlerErr)
 			} else {
-				dglogger.Debugf(ctx, "Handle success | topic: %s | ts: %d | eventId: %d | message: %s", topic, msg.Ts, msg.EventId, message)
+				dglogger.Debugf(dc, "Handle success | topic: %s | ts: %d | eventId: %d | message: %s", topic, msg.Ts, msg.EventId, message)
+				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), 0)
 			}
 		}
 		return utils.IfReturn(end.Load(), client.ActWithEnd, client.Ack)
 	})
 	if err != nil {
-		ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
 	}
 }
