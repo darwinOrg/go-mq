@@ -34,7 +34,7 @@ func TestRedisStreamAdapter(t *testing.T) {
 
 func TestSmssAdapter(t *testing.T) {
 	redisdk.InitClient("localhost:6379")
-	mqAdapter, _ := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
+	mqAdapter, err := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
 		Type:      dgmq.MqAdapterSmss,
 		Host:      "localhost",
 		Port:      12301,
@@ -43,6 +43,9 @@ func TestSmssAdapter(t *testing.T) {
 		Group:     "test",
 		BatchSize: 10,
 	})
+	if err != nil {
+		panic(err)
+	}
 	pubAndSub(mqAdapter, "smss_topic")
 }
 
