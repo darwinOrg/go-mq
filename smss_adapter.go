@@ -141,7 +141,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		for _, msg := range messages {
 			traceId := msg.GetHeaderValue(constants.TraceId)
 			dc := &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
-			message := string(msg.ToBytes())
+			message := string(msg.GetPayload())
 			handlerErr := handler(dc, message)
 			if handlerErr != nil {
 				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | message: %s | err: %v", topic, msg.Ts, msg.EventId, message, handlerErr)
