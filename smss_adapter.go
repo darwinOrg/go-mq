@@ -63,7 +63,10 @@ func (a *smssAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) e
 	err := a.pubClient.Publish(topic, msg, ctx.TraceId)
 	if err != nil {
 		dglogger.Errorf(ctx, "Publish error | topic: %s | err: %v", topic, err)
+	} else {
+		dglogger.Debugf(ctx, "Publish success | topic: %s | payload: %s", topic, string(payload))
 	}
+
 	return err
 }
 
