@@ -78,6 +78,11 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 
 func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
+	err := a.pubClient.CreateMQ(topic, 0, ctx.TraceId)
+	if err != nil && err.Error() != "mq exist" {
+		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
+		return err
+	}
 	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
 	if err != nil {
 		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
