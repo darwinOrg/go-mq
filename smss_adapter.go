@@ -141,12 +141,12 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		for _, msg := range messages {
 			traceId := msg.GetHeaderValue(constants.TraceId)
 			dc := &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
-			message := string(msg.GetPayload())
-			handlerErr := handler(dc, message)
+			payload := string(msg.GetPayload())
+			handlerErr := handler(dc, payload)
 			if handlerErr != nil {
-				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | message: %s | err: %v", topic, msg.Ts, msg.EventId, message, handlerErr)
+				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | payload: %s | err: %v", topic, msg.Ts, msg.EventId, payload, handlerErr)
 			} else {
-				dglogger.Debugf(dc, "Handle success | topic: %s | ts: %d | eventId: %d | message: %s", topic, msg.Ts, msg.EventId, message)
+				dglogger.Debugf(dc, "Handle success | topic: %s | ts: %d | eventId: %d | payload: %s", topic, msg.Ts, msg.EventId, payload)
 				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), 0)
 			}
 		}
