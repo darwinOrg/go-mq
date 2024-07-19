@@ -6,7 +6,7 @@ require (
 	github.com/darwinOrg/go-common v0.1.58
 	github.com/darwinOrg/go-logger v0.0.6
 	github.com/darwinOrg/go-redis v0.0.18
-	github.com/darwinOrg/smss-client v0.0.6
+	github.com/darwinOrg/smss-client v0.0.7
 	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.5.4
 )
