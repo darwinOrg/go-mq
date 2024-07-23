@@ -103,7 +103,7 @@ func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 func (a *smssAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 	err := a.pubClient.CreateMQ(topic, time.Now().Add(8*time.Hour).UnixMilli(), ctx.TraceId)
-	if err != nil && err.Error() != "mq exist" {
+	if err != nil && err.Error() != "topic exist" {
 		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
 		return err
 	}
