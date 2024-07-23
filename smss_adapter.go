@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-const topicExistsError = "topic exist"
+const (
+	topicExistsError = "topic exist"
+	sentTimeHeader   = "sent_time"
+)
 
 type smssAdapter struct {
 	redisCli  redisdk.RedisCli
@@ -61,6 +64,7 @@ func (a *smssAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) e
 
 	msg := client.NewMessage(payload)
 	msg.AddHeader(constants.TraceId, ctx.TraceId)
+	msg.AddHeader(sentTimeHeader, strconv.FormatInt(time.Now().UnixMilli(), 10))
 
 	err := a.pubClient.Publish(topic, msg, ctx.TraceId)
 	if err != nil {
@@ -146,12 +150,22 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		for _, msg := range messages {
 			traceId := msg.GetHeaderValue(constants.TraceId)
 			dc := &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
+
+			var delayMilli int64
+			sentTime := msg.GetHeaderValue(sentTimeHeader)
+			if sentTime != "" {
+				sentTimeMilli, _ := strconv.ParseInt(sentTime, 10, 64)
+				delayMilli = time.Now().UnixMilli() - sentTimeMilli
+			}
+
 			payload := string(msg.GetPayload())
 			handlerErr := handler(dc, payload)
 			if handlerErr != nil {
-				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | payload: %s | err: %v", topic, msg.Ts, msg.EventId, payload, handlerErr)
+				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d | err: %v",
+					topic, msg.Ts, msg.EventId, payload, delayMilli, handlerErr)
 			} else {
-				dglogger.Debugf(dc, "Handle success | topic: %s | ts: %d | eventId: %d | payload: %s", topic, msg.Ts, msg.EventId, payload)
+				dglogger.Infof(dc, "Handle success | topic: %s | ts: %d | eventId: %d | delayMilli: %d | payload: %s",
+					topic, msg.Ts, msg.EventId, delayMilli, payload)
 				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), 0)
 			}
 		}
