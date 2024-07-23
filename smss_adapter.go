@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const topicExistsError = "topic exist"
+
 type smssAdapter struct {
 	redisCli  redisdk.RedisCli
 	host      string
@@ -82,7 +84,7 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 	err := a.pubClient.CreateMQ(topic, 0, ctx.TraceId)
-	if err != nil && err.Error() != "mq exist" {
+	if err != nil && err.Error() != topicExistsError {
 		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
 		return err
 	}
@@ -103,7 +105,7 @@ func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 func (a *smssAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
 	err := a.pubClient.CreateMQ(topic, time.Now().Add(8*time.Hour).UnixMilli(), ctx.TraceId)
-	if err != nil && err.Error() != "topic exist" {
+	if err != nil && err.Error() != topicExistsError {
 		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
 		return err
 	}
