@@ -137,6 +137,25 @@ func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 	return nil
 }
 
+func (a *smssAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
+	err := a.pubClient.CreateMQ(topic, 0, ctx.TraceId)
+	if err != nil && err.Error() != topicExistsError {
+		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
+		return err
+	}
+	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
+	if err != nil {
+		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
+	}
+
+	go func() {
+		defer subClient.Close()
+		a.subscribe(ctx, closeCh, subClient, topic, handler)
+	}()
+
+	return nil
+}
+
 func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, subClient *client.SubClient, topic string, handler SubscribeHandler) {
 	end := new(atomic.Bool)
 	end.Store(false)

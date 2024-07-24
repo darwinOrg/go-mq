@@ -103,6 +103,10 @@ func (a *redisStreamAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan
 	return nil
 }
 
+func (a *redisStreamAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
+	return a.DynamicSubscribe(ctx, closeCh, topic, handler)
+}
+
 func (a *redisStreamAdapter) subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) {
 	xstreams, readErr := a.redisCli.XReadGroup(&redis.XReadGroupArgs{
 		Group:    a.group,
