@@ -9,6 +9,7 @@ import (
 	client "github.com/darwinOrg/smss-client"
 	"github.com/google/uuid"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -16,6 +17,7 @@ import (
 const (
 	topicExistsError = "topic exist"
 	sentTimeHeader   = "sent_time"
+	smssEndHeader    = "end"
 )
 
 type smssAdapter struct {
@@ -134,6 +136,12 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		go func() {
 			<-closeCh
 			end.Store(true)
+			endMsg := client.NewMessage([]byte("{}"))
+			endMsg.AddHeader(smssEndHeader, "true")
+			err := a.Publish(ctx, topic, endMsg)
+			if err != nil {
+				subClient.Close()
+			}
 		}()
 	}
 
@@ -148,6 +156,11 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 
 	err = subClient.Sub(eventId, a.batchSize, a.timeout, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
+			endHeader := msg.GetHeaderValue(smssEndHeader)
+			if endHeader == "true" {
+				return client.ActWithEnd
+			}
+
 			var dc *dgctx.DgContext
 			if closeCh != nil {
 				dc = ctx
@@ -176,7 +189,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		}
 		return utils.IfReturn(end.Load(), client.ActWithEnd, client.Ack)
 	})
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "register exist") {
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
 	}
 }
