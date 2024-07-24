@@ -139,6 +139,12 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 			end.Store(true)
 			endMsg := client.NewMessage([]byte("{}"))
 			endMsg.AddHeader(smssEndHeader, "true")
+
+			requestId := ctx.GetExtraValue(RequestIdHeader)
+			if strReq, ok := requestId.(string); ok && strReq != "" {
+				endMsg.AddHeader(RequestIdHeader, strReq)
+			}
+
 			err := a.pubClient.Publish(topic, endMsg, ctx.TraceId)
 			if err != nil {
 				subClient.Termite(true)

@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const RequestIdHeader = "request_id"
+
 type SubscribeHandler func(ctx *dgctx.DgContext, message string) error
 
 type MqAdapter interface {
