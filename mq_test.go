@@ -17,6 +17,8 @@ func TestRedisListAdapter(t *testing.T) {
 		Type:    dgmq.MqAdapterRedisList,
 		Timeout: time.Minute,
 	})
+	defer mqAdapter.Close()
+
 	pubAndSub(mqAdapter, "redis_list_topic")
 }
 
@@ -29,6 +31,8 @@ func TestRedisStreamAdapter(t *testing.T) {
 		Consumer:  os.Getenv("HOSTNAME"),
 		BatchSize: 10,
 	})
+	defer mqAdapter.Close()
+
 	pubAndSub(mqAdapter, "redis_stream_topic")
 }
 
@@ -46,6 +50,8 @@ func TestSmssAdapter(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	defer mqAdapter.Close()
+
 	pubAndSub(mqAdapter, "smss_topic")
 }
 
