@@ -12,12 +12,12 @@ type SubscribeHandler func(ctx *dgctx.DgContext, message string) error
 type MqAdapter interface {
 	Publisher
 	Subscriber
-	Close()
 }
 
 type Publisher interface {
 	Publish(ctx *dgctx.DgContext, topic string, message any) error
 	Destroy(ctx *dgctx.DgContext, topic string) error
+	Close()
 }
 
 type Subscriber interface {
