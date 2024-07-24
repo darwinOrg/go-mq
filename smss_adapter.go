@@ -24,6 +24,7 @@ type smssAdapter struct {
 	port      int
 	timeout   time.Duration
 	group     string
+	consumer  string
 	batchSize uint8
 	pubClient *client.PubClient
 }
@@ -47,6 +48,7 @@ func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapt
 		port:      config.Port,
 		timeout:   config.Timeout,
 		group:     config.Group,
+		consumer:  config.Consumer,
 		batchSize: uint8(config.BatchSize),
 		pubClient: pubClient,
 	}, nil
@@ -88,7 +90,7 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
-	_ = a.redisCli.Del(getSmssEventIdKey(topic))
+	_ = a.redisCli.Del(a.getSmssEventIdKey(topic))
 	return err
 }
 
@@ -125,7 +127,10 @@ func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 	}
 
 	go func() {
-		defer subClient.Close()
+		defer func() {
+			subClient.Close()
+			_ = a.Destroy(ctx, topic)
+		}()
 		a.subscribe(ctx, closeCh, subClient, topic, handler)
 	}()
 
@@ -143,7 +148,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		}()
 	}
 
-	eventIdKey := getSmssEventIdKey(topic)
+	eventIdKey := a.getSmssEventIdKey(topic)
 	var eventId int64
 	strEventId, err := a.redisCli.Get(eventIdKey)
 	if err != nil {
@@ -191,6 +196,9 @@ func (a *smssAdapter) Close() {
 	a.pubClient.Close()
 }
 
-func getSmssEventIdKey(topic string) string {
-	return "smssid_" + topic
+func (a *smssAdapter) getSmssEventIdKey(topic string) string {
+	return "smssid_" +
+		utils.IfReturn(a.group != "", a.group+"_", "") +
+		utils.IfReturn(a.consumer != "", a.consumer+"_", "") +
+		topic
 }
