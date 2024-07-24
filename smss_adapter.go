@@ -161,6 +161,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 			endHeader := msg.GetHeaderValue(smssEndHeader)
 			if endHeader == "true" {
 				dglogger.Infof(ctx, "smss client receive end message | topic: %s", topic)
+				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
 				return client.ActWithEnd
 			}
 
