@@ -29,6 +29,13 @@ type smssAdapter struct {
 }
 
 func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapter, error) {
+	if config.PoolSize < 1 {
+		config.PoolSize = 1
+	}
+	if config.BatchSize < 1 {
+		config.BatchSize = 1
+	}
+
 	pubClient, err := client.NewPubClient(config.Host, config.Port, config.Timeout, config.PoolSize)
 	if err != nil {
 		return nil, err
@@ -164,8 +171,8 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d | err: %v",
 					topic, msg.Ts, msg.EventId, payload, delayMilli, handlerErr)
 			} else {
-				dglogger.Infof(dc, "Handle success | topic: %s | ts: %d | eventId: %d | delayMilli: %d | payload: %s",
-					topic, msg.Ts, msg.EventId, delayMilli, payload)
+				dglogger.Infof(dc, "Handle success | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d",
+					topic, msg.Ts, msg.EventId, payload, delayMilli)
 				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), 0)
 			}
 		}
