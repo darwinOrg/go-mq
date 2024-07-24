@@ -135,6 +135,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 	if closeCh != nil {
 		go func() {
 			<-closeCh
+			dglogger.Infof(ctx, "smss client close | topic: %s", topic)
 			end.Store(true)
 			endMsg := client.NewMessage([]byte("{}"))
 			endMsg.AddHeader(smssEndHeader, "true")
