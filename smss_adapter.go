@@ -192,7 +192,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		}
 
 		if end.Load() {
-			dglogger.Infof(ctx, "smss client receive end message | topic: %s", topic)
+			dglogger.Infof(ctx, "smss client end flag is true | topic: %s", topic)
 			return client.ActWithEnd
 		} else {
 			return client.Ack
