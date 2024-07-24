@@ -160,6 +160,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		for _, msg := range messages {
 			endHeader := msg.GetHeaderValue(smssEndHeader)
 			if endHeader == "true" {
+				dglogger.Infof(ctx, "smss client receive end message | topic: %s", topic)
 				return client.ActWithEnd
 			}
 
@@ -189,7 +190,13 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
 			}
 		}
-		return utils.IfReturn(end.Load(), client.ActWithEnd, client.Ack)
+
+		if end.Load() {
+			dglogger.Infof(ctx, "smss client receive end message | topic: %s", topic)
+			return client.ActWithEnd
+		} else {
+			return client.Ack
+		}
 	})
 	if err != nil && !strings.Contains(err.Error(), "register exist") {
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
