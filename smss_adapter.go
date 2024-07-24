@@ -88,7 +88,7 @@ func (a *smssAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) e
 }
 
 func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	err := a.pubClient.DeleteMQ(topic, ctx.TraceId)
+	err := a.pubClient.DeleteTopic(topic, ctx.TraceId)
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
@@ -110,7 +110,7 @@ func (a *smssAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{},
 
 func (a *smssAdapter) createTopicAndSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, lifeDuration time.Duration, handler SubscribeHandler) error {
 	life := utils.IfReturn(int64(lifeDuration) == 0, 0, time.Now().Add(lifeDuration).UnixMilli())
-	err := a.pubClient.CreateMQ(topic, life, ctx.TraceId)
+	err := a.pubClient.CreateTopic(topic, life, ctx.TraceId)
 	if err != nil && err.Error() != topicExistsError {
 		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
 		return err
@@ -138,9 +138,9 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 			end.Store(true)
 			endMsg := client.NewMessage([]byte("{}"))
 			endMsg.AddHeader(smssEndHeader, "true")
-			err := a.Publish(ctx, topic, endMsg)
+			err := a.pubClient.Publish(topic, endMsg, ctx.TraceId)
 			if err != nil {
-				subClient.Close()
+				subClient.Termite(true)
 			}
 		}()
 	}
