@@ -127,10 +127,7 @@ func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 	}
 
 	go func() {
-		defer func() {
-			subClient.Close()
-			_ = a.Destroy(ctx, topic)
-		}()
+		defer subClient.Close()
 		a.subscribe(ctx, closeCh, subClient, topic, handler)
 	}()
 
