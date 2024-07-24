@@ -140,3 +140,7 @@ func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
 
 	return
 }
+
+func (a *redisStreamAdapter) Close() {
+
+}

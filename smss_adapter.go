@@ -183,6 +183,10 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 	}
 }
 
+func (a *smssAdapter) Close() {
+	a.pubClient.Close()
+}
+
 func getSmssEventIdKey(topic string) string {
 	return "smssid_" + topic
 }

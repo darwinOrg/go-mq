@@ -95,3 +95,7 @@ func (a *redisListAdapter) subscribe(topic string, handler SubscribeHandler) {
 		}
 	}
 }
+
+func (a *redisListAdapter) Close() {
+
+}
