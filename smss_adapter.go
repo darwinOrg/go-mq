@@ -152,6 +152,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		dglogger.Warnf(ctx, "redisCli get smss eventid error | topic: %s | err: %v", topic, err)
 	} else {
 		eventId, _ = strconv.ParseInt(strEventId, 10, 64)
+		dglogger.Infof(ctx, "get smss eventid | topic: %s | eventId: %d", topic, eventId)
 	}
 
 	err = subClient.Sub(eventId, a.batchSize, a.timeout, func(messages []*client.SubMessage) client.AckEnum {
