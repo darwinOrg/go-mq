@@ -138,6 +138,8 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 			dglogger.Infof(ctx, "smss client close | topic: %s", topic)
 			end.Store(true)
 			endMsg := client.NewMessage([]byte("{}"))
+			endMsg.AddHeader(constants.TraceId, ctx.TraceId)
+			endMsg.AddHeader(sentTimeHeader, strconv.FormatInt(time.Now().UnixMilli(), 10))
 			endMsg.AddHeader(smssEndHeader, "true")
 
 			requestId := ctx.GetExtraValue(RequestIdHeader)
