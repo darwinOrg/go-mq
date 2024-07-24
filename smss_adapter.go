@@ -95,47 +95,20 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 }
 
 func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
-	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
-	err := a.pubClient.CreateMQ(topic, 0, ctx.TraceId)
-	if err != nil && err.Error() != topicExistsError {
-		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
-		return err
-	}
-	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
-	if err != nil {
-		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
-		return err
-	}
-
-	go func() {
-		defer subClient.Close()
-		a.subscribe(ctx, nil, subClient, topic, handler)
-	}()
-
-	return nil
+	return a.createTopicAndSubscribe(&dgctx.DgContext{TraceId: uuid.NewString()}, nil, topic, 0, handler)
 }
 
 func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	err := a.pubClient.CreateMQ(topic, time.Now().Add(8*time.Hour).UnixMilli(), ctx.TraceId)
-	if err != nil && err.Error() != topicExistsError {
-		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
-		return err
-	}
-	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
-	if err != nil {
-		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
-	}
-
-	go func() {
-		defer subClient.Close()
-		a.subscribe(ctx, closeCh, subClient, topic, handler)
-	}()
-
-	return nil
+	return a.createTopicAndSubscribe(ctx, closeCh, topic, 8*time.Hour, handler)
 }
 
 func (a *smssAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	err := a.pubClient.CreateMQ(topic, 0, ctx.TraceId)
+	return a.createTopicAndSubscribe(ctx, closeCh, topic, 0, handler)
+}
+
+func (a *smssAdapter) createTopicAndSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, lifeDuration time.Duration, handler SubscribeHandler) error {
+	life := utils.IfReturn(int64(lifeDuration) == 0, 0, time.Now().Add(lifeDuration).UnixMilli())
+	err := a.pubClient.CreateMQ(topic, life, ctx.TraceId)
 	if err != nil && err.Error() != topicExistsError {
 		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
 		return err
@@ -147,13 +120,13 @@ func (a *smssAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{},
 
 	go func() {
 		defer subClient.Close()
-		a.subscribe(ctx, closeCh, subClient, topic, handler)
+		a.subscribe(ctx, closeCh, subClient, topic, lifeDuration, handler)
 	}()
 
 	return nil
 }
 
-func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, subClient *client.SubClient, topic string, handler SubscribeHandler) {
+func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, subClient *client.SubClient, topic string, lifeDuration time.Duration, handler SubscribeHandler) {
 	end := new(atomic.Bool)
 	end.Store(false)
 
@@ -198,7 +171,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 			} else {
 				dglogger.Infof(dc, "Handle success | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d",
 					topic, msg.Ts, msg.EventId, payload, delayMilli)
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), 0)
+				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
 			}
 		}
 		return utils.IfReturn(end.Load(), client.ActWithEnd, client.Ack)
