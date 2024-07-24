@@ -113,8 +113,7 @@ func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 	return nil
 }
 
-func (a *smssAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	ctx := &dgctx.DgContext{TraceId: uuid.NewString()}
+func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	err := a.pubClient.CreateMQ(topic, time.Now().Add(8*time.Hour).UnixMilli(), ctx.TraceId)
 	if err != nil && err.Error() != topicExistsError {
 		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
@@ -155,8 +154,13 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 
 	err = subClient.Sub(eventId, a.batchSize, a.timeout, func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
-			traceId := msg.GetHeaderValue(constants.TraceId)
-			dc := &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
+			var dc *dgctx.DgContext
+			if closeCh != nil {
+				dc = ctx
+			} else {
+				traceId := msg.GetHeaderValue(constants.TraceId)
+				dc = &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
+			}
 
 			var delayMilli int64
 			sentTime := msg.GetHeaderValue(sentTimeHeader)

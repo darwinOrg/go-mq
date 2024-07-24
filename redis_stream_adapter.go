@@ -75,14 +75,14 @@ func (a *redisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) e
 
 	go func() {
 		for {
-			a.subscribe(topic, handler)
+			a.subscribe(&dgctx.DgContext{TraceId: uuid.NewString()}, topic, handler)
 		}
 	}()
 
 	return nil
 }
 
-func (a *redisStreamAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
+func (a *redisStreamAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	_, err := a.redisCli.XGroupCreateMkStream(topic, a.group, "$")
 	if err != nil {
 		return err
@@ -92,11 +92,10 @@ func (a *redisStreamAdapter) DynamicSubscribe(closeCh chan struct{}, topic strin
 		for {
 			select {
 			case <-closeCh:
-				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
-				dglogger.Infof(dc, "closed topic: %s ", topic)
+				dglogger.Infof(ctx, "closed topic: %s ", topic)
 				return
 			default:
-				a.subscribe(topic, handler)
+				a.subscribe(ctx, topic, handler)
 			}
 		}
 	}()
@@ -104,8 +103,7 @@ func (a *redisStreamAdapter) DynamicSubscribe(closeCh chan struct{}, topic strin
 	return nil
 }
 
-func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
-	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
+func (a *redisStreamAdapter) subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) {
 	xstreams, readErr := a.redisCli.XReadGroup(&redis.XReadGroupArgs{
 		Group:    a.group,
 		Consumer: a.consumer,
@@ -114,7 +112,7 @@ func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
 		Block:    a.block,
 	})
 	if readErr != nil {
-		dglogger.Errorf(dc, "XReadGroup error | topic:%s | err:%v", topic, readErr)
+		dglogger.Errorf(ctx, "XReadGroup error | topic:%s | err:%v", topic, readErr)
 		time.Sleep(time.Second)
 		return
 	}
@@ -125,15 +123,15 @@ func (a *redisStreamAdapter) subscribe(topic string, handler SubscribeHandler) {
 			if !ok {
 				continue
 			}
-			handlerErr := handler(dc, message)
+			handlerErr := handler(ctx, message)
 			if handlerErr != nil {
-				dglogger.Errorf(dc, "Handle error | topic:%s | err:%v", topic, handlerErr)
+				dglogger.Errorf(ctx, "Handle error | topic:%s | err:%v", topic, handlerErr)
 				continue
 			}
 
 			_, err := a.redisCli.XAck(topic, a.group, xmessage.ID)
 			if err != nil {
-				dglogger.Errorf(dc, "Acknowledge error |topic:%s | err:%v", topic, err)
+				dglogger.Errorf(ctx, "Acknowledge error |topic:%s | err:%v", topic, err)
 			}
 		}
 	}

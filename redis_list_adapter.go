@@ -56,23 +56,22 @@ func (a *redisListAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 func (a *redisListAdapter) Subscribe(topic string, handler SubscribeHandler) error {
 	go func() {
 		for {
-			a.subscribe(topic, handler)
+			a.subscribe(&dgctx.DgContext{TraceId: uuid.NewString()}, topic, handler)
 		}
 	}()
 
 	return nil
 }
 
-func (a *redisListAdapter) DynamicSubscribe(closeCh chan struct{}, topic string, handler SubscribeHandler) error {
+func (a *redisListAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	go func() {
 		for {
 			select {
 			case <-closeCh:
-				dc := &dgctx.DgContext{TraceId: uuid.NewString()}
-				dglogger.Infof(dc, "closed topic: %s ", topic)
+				dglogger.Infof(ctx, "closed topic: %s ", topic)
 				return
 			default:
-				a.subscribe(topic, handler)
+				a.subscribe(ctx, topic, handler)
 			}
 		}
 	}()
@@ -80,18 +79,17 @@ func (a *redisListAdapter) DynamicSubscribe(closeCh chan struct{}, topic string,
 	return nil
 }
 
-func (a *redisListAdapter) subscribe(topic string, handler SubscribeHandler) {
-	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
+func (a *redisListAdapter) subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) {
 	rts, readErr := a.redisCli.BRPop(a.timeout, topic)
 	if readErr != nil {
-		dglogger.Debugf(dc, "BRPop error | topic: %s | err: %v", topic, readErr)
+		dglogger.Debugf(ctx, "BRPop error | topic: %s | err: %v", topic, readErr)
 		time.Sleep(time.Second)
 		return
 	}
 	if len(rts) == 2 {
-		handlerErr := handler(dc, rts[1])
+		handlerErr := handler(ctx, rts[1])
 		if handlerErr != nil {
-			dglogger.Errorf(dc, "Handle error | topic: %s | err: %v", topic, handlerErr)
+			dglogger.Errorf(ctx, "Handle error | topic: %s | err: %v", topic, handlerErr)
 		}
 	}
 }
