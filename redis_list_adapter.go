@@ -21,6 +21,10 @@ func NewRedisListAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) MqA
 	}
 }
 
+func (a *redisListAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
+	return nil
+}
+
 func (a *redisListAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
 	var strMsg string
 	switch message.(type) {

@@ -56,6 +56,16 @@ func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapt
 	}, nil
 }
 
+func (a *smssAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
+	err := a.pubClient.CreateTopic(topic, 0, ctx.TraceId)
+	if err != nil && err.Error() != topicExistsError {
+		dglogger.Errorf(ctx, "CreateTopic error | topic: %s | err: %v", topic, err)
+		return err
+	}
+
+	return nil
+}
+
 func (a *smssAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
 	var payload []byte
 	switch message.(type) {
@@ -112,7 +122,7 @@ func (a *smssAdapter) createTopicAndSubscribe(ctx *dgctx.DgContext, closeCh chan
 	life := utils.IfReturn(int64(lifeDuration) == 0, 0, time.Now().Add(lifeDuration).UnixMilli())
 	err := a.pubClient.CreateTopic(topic, life, ctx.TraceId)
 	if err != nil && err.Error() != topicExistsError {
-		dglogger.Errorf(ctx, "CreateMQ error | topic: %s | err: %v", topic, err)
+		dglogger.Errorf(ctx, "CreateTopic error | topic: %s | err: %v", topic, err)
 		return err
 	}
 	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)

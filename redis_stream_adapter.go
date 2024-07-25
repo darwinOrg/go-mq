@@ -32,6 +32,10 @@ func NewRedisStreamAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) M
 	}
 }
 
+func (a *redisStreamAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
+	return nil
+}
+
 func (a *redisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
 	var values map[string]any
 	switch message.(type) {

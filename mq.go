@@ -17,6 +17,7 @@ type MqAdapter interface {
 }
 
 type Publisher interface {
+	CreateTopic(ctx *dgctx.DgContext, topic string) error
 	Publish(ctx *dgctx.DgContext, topic string, message any) error
 	Destroy(ctx *dgctx.DgContext, topic string) error
 	Close()
