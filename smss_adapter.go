@@ -217,7 +217,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 			return client.Ack
 		}
 	})
-	if err != nil && !strings.Contains(err.Error(), "register exist") {
+	if err != nil && !strings.Contains(err.Error(), "regiester exist") {
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
 	}
 }
