@@ -238,6 +238,12 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		}
 	}
 
+	defer func() {
+		if subClient != nil {
+			subClient.Close()
+		}
+	}()
+
 	for {
 		if subClient == nil {
 			subClient, err = a.newSubClient(ctx, topic)
