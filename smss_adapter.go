@@ -249,7 +249,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 			subClient, err = a.newSubClient(ctx, topic)
 			if err != nil {
 				dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(time.Second)
 				continue
 			}
 		}
@@ -260,7 +260,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		}
 
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(time.Second)
 
 		if subClient != nil {
 			subClient.Close()
