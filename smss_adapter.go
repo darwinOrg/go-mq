@@ -9,15 +9,15 @@ import (
 	client "github.com/darwinOrg/smss-client"
 	"github.com/google/uuid"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 )
 
 const (
-	topicExistsError = "topic exist"
-	sentTimeHeader   = "sent_time"
-	smssEndHeader    = "end"
+	topicExistsError    = "topic exist"
+	registerExistsError = "regiester exist"
+	sentTimeHeader      = "sent_time"
+	smssEndHeader       = "end"
 )
 
 type smssAdapter struct {
@@ -125,18 +125,37 @@ func (a *smssAdapter) createTopicAndSubscribe(ctx *dgctx.DgContext, closeCh chan
 		dglogger.Errorf(ctx, "CreateTopic error | topic: %s | err: %v", topic, err)
 		return err
 	}
-	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
+
+	subClient, err := a.newSubClient(ctx, topic)
 	if err != nil {
-		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
 		return err
 	}
 
 	go func() {
-		defer subClient.Close()
 		a.subscribe(ctx, closeCh, subClient, topic, lifeDuration, handler)
 	}()
 
 	return nil
+}
+
+func (a *smssAdapter) newSubClient(ctx *dgctx.DgContext, topic string) (*client.SubClient, error) {
+	var subClient *client.SubClient
+	var err error
+
+	for i := 0; i < 30; i++ {
+		subClient, err = client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
+		if err == nil {
+			break
+		}
+		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
+		time.Sleep(2 * time.Second)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return subClient, nil
 }
 
 func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, subClient *client.SubClient, topic string, lifeDuration time.Duration, handler SubscribeHandler) {
@@ -175,7 +194,7 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		dglogger.Infof(ctx, "get smss eventid | topic: %s | eventId: %d", topic, eventId)
 	}
 
-	err = subClient.Sub(eventId, a.batchSize, a.timeout, func(messages []*client.SubMessage) client.AckEnum {
+	subFunc := func(messages []*client.SubMessage) client.AckEnum {
 		for _, msg := range messages {
 			endHeader := msg.GetHeaderValue(smssEndHeader)
 			if endHeader == "true" {
@@ -217,9 +236,30 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, sub
 		} else {
 			return client.Ack
 		}
-	})
-	if err != nil && !strings.Contains(err.Error(), "regiester exist") {
+	}
+
+	for {
+		if subClient == nil {
+			subClient, err = a.newSubClient(ctx, topic)
+			if err != nil {
+				dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
+				time.Sleep(500 * time.Millisecond)
+				continue
+			}
+		}
+
+		err = subClient.Sub(eventId, a.batchSize, a.timeout, subFunc)
+		if err == nil {
+			break
+		}
+
 		dglogger.Errorf(ctx, "subClient.Sub error | topic: %s | err: %v", topic, err)
+		time.Sleep(500 * time.Millisecond)
+
+		if subClient != nil {
+			subClient.Close()
+			subClient = nil
+		}
 	}
 }
 
