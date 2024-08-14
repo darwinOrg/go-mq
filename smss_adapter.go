@@ -128,6 +128,7 @@ func (a *smssAdapter) createTopicAndSubscribe(ctx *dgctx.DgContext, closeCh chan
 	subClient, err := client.NewSubClient(topic, a.group, a.host, a.port, a.timeout)
 	if err != nil {
 		dglogger.Errorf(ctx, "NewSubClient error | topic: %s | err: %v", topic, err)
+		return err
 	}
 
 	go func() {
