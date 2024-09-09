@@ -28,7 +28,7 @@ type smssAdapter struct {
 	group         string
 	consumer      string
 	batchSize     uint8
-	pubClientPool client.PubClientPool
+	pubClientPool *client.PubClientPool
 }
 
 func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapter, error) {

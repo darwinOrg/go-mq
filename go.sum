@@ -6,8 +6,6 @@ github.com/darwinOrg/go-common v0.1.60 h1:zeSTrxdALMZ6P1xhSIHiG8yEv9VIg1sUV+iQse
 github.com/darwinOrg/go-common v0.1.60/go.mod h1:pItL/4ZV0bU64N2qD9ACpvDlYjeomAbheIzPXKqbb88=
 github.com/darwinOrg/go-logger v0.0.7 h1:gj/K2IOhf0O1fSELBN7UhRWFdeNMUHEb+DT+gRbt0v0=
 github.com/darwinOrg/go-logger v0.0.7/go.mod h1:B9MZPaJEyWoTYX5TMkn0ZLO8mrVAqWu34Bb917kDZF4=
-github.com/darwinOrg/go-redis v0.0.18 h1:9u5kRdbTL2oDBbSWlL7Jwd4tZdKDDLBCwSoK/+Nx3y0=
-github.com/darwinOrg/go-redis v0.0.18/go.mod h1:RiFQ8RPLp13SX6vBmzx2FfpHggQNoukg4O9kCU19Qgg=
 github.com/darwinOrg/go-redis v0.0.20 h1:5FmNbuSWnnKz4YR1TvBwvK7RSeHjiOsFg0FxmQP/P7A=
 github.com/darwinOrg/go-redis v0.0.20/go.mod h1:ztLmaPb4i2XkhbsASWy5xwzSnkncVVz1nketnvxpsFo=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -29,8 +27,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/redis/go-redis/v9 v9.6.1 h1:HHDteefn6ZkTtY5fGUE8tj8uy85AHk6zP7CpzIAM0y4=
 github.com/redis/go-redis/v9 v9.6.1/go.mod h1:0C0c6ycQsdpVNQpxb1njEQIqkx5UcsM8FJCQLgE9+RA=
-github.com/rolandhe/smss-client v0.0.3 h1:l42mKcCRqsypb3YzPZ3O5Y/LMVgVF0BRWihU2YEfmHY=
-github.com/rolandhe/smss-client v0.0.3/go.mod h1:RGUDZDpToeTkiG2eBL66H10ESwAvO6AzX0QqHhMR3+4=
+github.com/rolandhe/smss-client v0.0.4 h1:zWUNpdsStNxLWQOJ7qLFr6ZAmLEbIe1Z9HwPgSvYKxQ=
+github.com/rolandhe/smss-client v0.0.4/go.mod h1:RGUDZDpToeTkiG2eBL66H10ESwAvO6AzX0QqHhMR3+4=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
