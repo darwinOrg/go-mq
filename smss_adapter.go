@@ -175,88 +175,19 @@ func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, top
 	end.Store(false)
 
 	subLock := NewRedisSubLock(a.redisCli, true)
+	defer subLock.Shutdown()
 	dLockSub := client.NewDLockSub(topic, a.group, a.host, a.port, a.timeout, subLock)
 
 	if closeCh != nil {
 		go func() {
 			<-closeCh
-			dglogger.Infof(ctx, "smss client close | topic: %s", topic)
-			end.Store(true)
-			endMsg := client.NewMessage([]byte("{}"))
-			endMsg.AddHeader(constants.TraceId, ctx.TraceId)
-			endMsg.AddHeader(sentTimeHeader, strconv.FormatInt(time.Now().UnixMilli(), 10))
-			endMsg.AddHeader(smssEndHeader, "true")
-
-			requestId := ctx.GetExtraValue(RequestIdHeader)
-			if strReq, ok := requestId.(string); ok && strReq != "" {
-				endMsg.AddHeader(RequestIdHeader, strReq)
-			}
-
-			err := a.pubClient.Publish(topic, endMsg, ctx.TraceId)
-			if err != nil {
-				subLock.Shutdown()
-			}
+			_ = a.endSub(ctx, topic, end)
 		}()
 	}
 
-	eventIdKey := a.getSmssEventIdKey(topic)
-	var eventId int64
-	strEventId, err := a.redisCli.Get(eventIdKey)
-	if err != nil {
-		dglogger.Warnf(ctx, "redisCli get smss eventid error | topic: %s | err: %v", topic, err)
-	} else {
-		eventId, _ = strconv.ParseInt(strEventId, 10, 64)
-		dglogger.Infof(ctx, "get smss eventid | topic: %s | eventId: %d", topic, eventId)
-	}
-
-	subFunc := func(messages []*client.SubMessage) client.AckEnum {
-		for _, msg := range messages {
-			endHeader := msg.GetHeaderValue(smssEndHeader)
-			if endHeader == "true" {
-				dglogger.Infof(ctx, "smss client receive end message | topic: %s", topic)
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
-				return client.AckWithEnd
-			}
-
-			var dc *dgctx.DgContext
-			if closeCh != nil {
-				dc = ctx
-			} else {
-				traceId := msg.GetHeaderValue(constants.TraceId)
-				dc = &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
-			}
-
-			var delayMilli int64
-			sentTime := msg.GetHeaderValue(sentTimeHeader)
-			if sentTime != "" {
-				sentTimeMilli, _ := strconv.ParseInt(sentTime, 10, 64)
-				delayMilli = time.Now().UnixMilli() - sentTimeMilli
-			}
-
-			payload := string(msg.GetPayload())
-			handlerErr := handler(dc, payload)
-			if handlerErr != nil {
-				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d | err: %v",
-					topic, msg.Ts, msg.EventId, payload, delayMilli, handlerErr)
-			} else {
-				dglogger.Infof(dc, "Handle success | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d",
-					topic, msg.Ts, msg.EventId, payload, delayMilli)
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
-			}
-		}
-
-		if end.Load() {
-			dglogger.Infof(ctx, "smss client end flag is true | topic: %s", topic)
-			return client.AckWithEnd
-		} else {
-			return client.Ack
-		}
-	}
-
-	defer subLock.Shutdown()
-
+	eventId, subFunc := a.getEventIdAndSubFunc(ctx, closeCh, topic, lifeDuration, handler, end)
 	for {
-		err = dLockSub.Sub(eventId, a.batchSize, a.timeout, subFunc, nil)
+		err := dLockSub.Sub(eventId, a.batchSize, a.timeout, subFunc, nil)
 		if err == nil {
 			break
 		}
@@ -273,77 +204,11 @@ func (a *smssAdapter) dynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 	if closeCh != nil {
 		go func() {
 			<-closeCh
-			dglogger.Infof(ctx, "smss client close | topic: %s", topic)
-			end.Store(true)
-			endMsg := client.NewMessage([]byte("{}"))
-			endMsg.AddHeader(constants.TraceId, ctx.TraceId)
-			endMsg.AddHeader(sentTimeHeader, strconv.FormatInt(time.Now().UnixMilli(), 10))
-			endMsg.AddHeader(smssEndHeader, "true")
-
-			requestId := ctx.GetExtraValue(RequestIdHeader)
-			if strReq, ok := requestId.(string); ok && strReq != "" {
-				endMsg.AddHeader(RequestIdHeader, strReq)
-			}
-
-			err := a.pubClient.Publish(topic, endMsg, ctx.TraceId)
+			err := a.endSub(ctx, topic, end)
 			if err != nil {
 				subClient.Termite()
 			}
 		}()
-	}
-
-	eventIdKey := a.getSmssEventIdKey(topic)
-	var eventId int64
-	strEventId, err := a.redisCli.Get(eventIdKey)
-	if err != nil {
-		dglogger.Warnf(ctx, "redisCli get smss eventid error | topic: %s | err: %v", topic, err)
-	} else {
-		eventId, _ = strconv.ParseInt(strEventId, 10, 64)
-		dglogger.Infof(ctx, "get smss eventid | topic: %s | eventId: %d", topic, eventId)
-	}
-
-	subFunc := func(messages []*client.SubMessage) client.AckEnum {
-		for _, msg := range messages {
-			endHeader := msg.GetHeaderValue(smssEndHeader)
-			if endHeader == "true" {
-				dglogger.Infof(ctx, "smss client receive end message | topic: %s", topic)
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
-				return client.AckWithEnd
-			}
-
-			var dc *dgctx.DgContext
-			if closeCh != nil {
-				dc = ctx
-			} else {
-				traceId := msg.GetHeaderValue(constants.TraceId)
-				dc = &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
-			}
-
-			var delayMilli int64
-			sentTime := msg.GetHeaderValue(sentTimeHeader)
-			if sentTime != "" {
-				sentTimeMilli, _ := strconv.ParseInt(sentTime, 10, 64)
-				delayMilli = time.Now().UnixMilli() - sentTimeMilli
-			}
-
-			payload := string(msg.GetPayload())
-			handlerErr := handler(dc, payload)
-			if handlerErr != nil {
-				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d | err: %v",
-					topic, msg.Ts, msg.EventId, payload, delayMilli, handlerErr)
-			} else {
-				dglogger.Infof(dc, "Handle success | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d",
-					topic, msg.Ts, msg.EventId, payload, delayMilli)
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
-			}
-		}
-
-		if end.Load() {
-			dglogger.Infof(ctx, "smss client end flag is true | topic: %s", topic)
-			return client.AckWithEnd
-		} else {
-			return client.Ack
-		}
 	}
 
 	defer func() {
@@ -352,6 +217,8 @@ func (a *smssAdapter) dynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 		}
 	}()
 
+	eventId, subFunc := a.getEventIdAndSubFunc(ctx, closeCh, topic, lifeDuration, handler, end)
+	var err error
 	for {
 		if subClient == nil {
 			subClient, err = a.newSubClient(ctx, topic)
@@ -375,6 +242,78 @@ func (a *smssAdapter) dynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 			subClient = nil
 		}
 	}
+}
+
+func (a *smssAdapter) getEventIdAndSubFunc(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, lifeDuration time.Duration, handler SubscribeHandler, end *atomic.Bool) (int64, client.MessagesAccept) {
+	eventIdKey := a.getSmssEventIdKey(topic)
+	var eventId int64
+	strEventId, err := a.redisCli.Get(eventIdKey)
+	if err != nil {
+		dglogger.Warnf(ctx, "redisCli get smss eventid error | topic: %s | err: %v", topic, err)
+	} else {
+		eventId, _ = strconv.ParseInt(strEventId, 10, 64)
+		dglogger.Infof(ctx, "get smss eventid | topic: %s | eventId: %d", topic, eventId)
+	}
+
+	return eventId, func(messages []*client.SubMessage) client.AckEnum {
+		for _, msg := range messages {
+			endHeader := msg.GetHeaderValue(smssEndHeader)
+			if endHeader == "true" {
+				dglogger.Infof(ctx, "smss client receive end message | topic: %s", topic)
+				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
+				return client.AckWithEnd
+			}
+
+			var dc *dgctx.DgContext
+			if closeCh != nil {
+				dc = ctx
+			} else {
+				traceId := msg.GetHeaderValue(constants.TraceId)
+				dc = &dgctx.DgContext{TraceId: utils.IfReturn(traceId != "", traceId, uuid.NewString())}
+			}
+
+			var delayMilli int64
+			sentTime := msg.GetHeaderValue(sentTimeHeader)
+			if sentTime != "" {
+				sentTimeMilli, _ := strconv.ParseInt(sentTime, 10, 64)
+				delayMilli = time.Now().UnixMilli() - sentTimeMilli
+			}
+
+			payload := string(msg.GetPayload())
+			handlerErr := handler(dc, payload)
+			if handlerErr != nil {
+				dglogger.Errorf(dc, "Handle fail | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d | err: %v",
+					topic, msg.Ts, msg.EventId, payload, delayMilli, handlerErr)
+			} else {
+				dglogger.Infof(dc, "Handle success | topic: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d",
+					topic, msg.Ts, msg.EventId, payload, delayMilli)
+				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
+			}
+		}
+
+		if end.Load() {
+			dglogger.Infof(ctx, "smss client end flag is true | topic: %s", topic)
+			return client.AckWithEnd
+		} else {
+			return client.Ack
+		}
+	}
+}
+
+func (a *smssAdapter) endSub(ctx *dgctx.DgContext, topic string, end *atomic.Bool) error {
+	dglogger.Infof(ctx, "smss client close | topic: %s", topic)
+	end.Store(true)
+	endMsg := client.NewMessage([]byte("{}"))
+	endMsg.AddHeader(constants.TraceId, ctx.TraceId)
+	endMsg.AddHeader(sentTimeHeader, strconv.FormatInt(time.Now().UnixMilli(), 10))
+	endMsg.AddHeader(smssEndHeader, "true")
+
+	requestId := ctx.GetExtraValue(RequestIdHeader)
+	if strReq, ok := requestId.(string); ok && strReq != "" {
+		endMsg.AddHeader(RequestIdHeader, strReq)
+	}
+
+	return a.pubClient.Publish(topic, endMsg, ctx.TraceId)
 }
 
 func (a *smssAdapter) Close() {
