@@ -8,6 +8,7 @@ import (
 	redisdk "github.com/darwinOrg/go-redis"
 	"github.com/google/uuid"
 	"github.com/rolandhe/smss-client/client"
+	"github.com/rolandhe/smss-client/pool"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -20,14 +21,14 @@ const (
 )
 
 type smssAdapter struct {
-	redisCli  redisdk.RedisCli
-	host      string
-	port      int
-	timeout   time.Duration
-	group     string
-	consumer  string
-	batchSize uint8
-	pubClient *client.PubClient
+	redisCli      redisdk.RedisCli
+	host          string
+	port          int
+	timeout       time.Duration
+	group         string
+	consumer      string
+	batchSize     uint8
+	pubClientPool client.PubClientPool
 }
 
 func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapter, error) {
@@ -38,20 +39,17 @@ func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapt
 		config.BatchSize = 1
 	}
 
-	pubClient, err := client.NewPubClient(config.Host, config.Port, config.Timeout)
-	if err != nil {
-		return nil, err
-	}
+	pubClientPool := client.NewPubClientPool(pool.NewDefaultConfig(), config.Host, config.Port, config.Timeout)
 
 	return &smssAdapter{
-		redisCli:  redisCli,
-		host:      config.Host,
-		port:      config.Port,
-		timeout:   config.Timeout,
-		group:     config.Group,
-		consumer:  config.Consumer,
-		batchSize: uint8(config.BatchSize),
-		pubClient: pubClient,
+		redisCli:      redisCli,
+		host:          config.Host,
+		port:          config.Port,
+		timeout:       config.Timeout,
+		group:         config.Group,
+		consumer:      config.Consumer,
+		batchSize:     uint8(config.BatchSize),
+		pubClientPool: pubClientPool,
 	}, nil
 }
 
@@ -61,7 +59,14 @@ func (a *smssAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
 
 func (a *smssAdapter) createTopic(ctx *dgctx.DgContext, topic string, lifeDuration time.Duration) error {
 	life := utils.IfReturn(int64(lifeDuration) == 0, 0, time.Now().Add(lifeDuration).UnixMilli())
-	err := a.pubClient.CreateTopic(topic, life, ctx.TraceId)
+	pubClient, err := a.pubClientPool.Borrow()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = a.pubClientPool.Return(pubClient)
+	}()
+	err = pubClient.CreateTopic(topic, life, ctx.TraceId)
 	if err != nil && err.Error() != topicExistsError {
 		dglogger.Errorf(ctx, "CreateTopic error | topic: %s | err: %v", topic, err)
 		return err
@@ -91,7 +96,15 @@ func (a *smssAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) e
 	msg.AddHeader(constants.TraceId, ctx.TraceId)
 	msg.AddHeader(sentTimeHeader, strconv.FormatInt(time.Now().UnixMilli(), 10))
 
-	err := a.pubClient.Publish(topic, msg, ctx.TraceId)
+	pubClient, err := a.pubClientPool.Borrow()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = a.pubClientPool.Return(pubClient)
+	}()
+
+	err = pubClient.Publish(topic, msg, ctx.TraceId)
 	if err != nil {
 		dglogger.Errorf(ctx, "Publish error | topic: %s | err: %v", topic, err)
 	} else {
@@ -102,7 +115,15 @@ func (a *smssAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) e
 }
 
 func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	err := a.pubClient.DeleteTopic(topic, ctx.TraceId)
+	pubClient, err := a.pubClientPool.Borrow()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = a.pubClientPool.Return(pubClient)
+	}()
+
+	err = pubClient.DeleteTopic(topic, ctx.TraceId)
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
@@ -313,11 +334,19 @@ func (a *smssAdapter) endSub(ctx *dgctx.DgContext, topic string, end *atomic.Boo
 		endMsg.AddHeader(RequestIdHeader, strReq)
 	}
 
-	return a.pubClient.Publish(topic, endMsg, ctx.TraceId)
+	pubClient, err := a.pubClientPool.Borrow()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = a.pubClientPool.Return(pubClient)
+	}()
+
+	return pubClient.Publish(topic, endMsg, ctx.TraceId)
 }
 
 func (a *smssAdapter) Close() {
-	a.pubClient.Close()
+	a.pubClientPool.ShutDown()
 }
 
 func (a *smssAdapter) getSmssEventIdKey(topic string) string {
