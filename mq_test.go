@@ -56,8 +56,9 @@ func TestSmssAdapter(t *testing.T) {
 }
 
 func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
+	ctx := &dgctx.DgContext{TraceId: "123"}
 	closeCh := make(chan struct{})
-	err := mqAdapter.DynamicSubscribe(closeCh, topic, func(_ *dgctx.DgContext, message string) error {
+	err := mqAdapter.DynamicSubscribe(ctx, closeCh, topic, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
 		return nil
