@@ -25,8 +25,8 @@ type Publisher interface {
 
 type Subscriber interface {
 	Subscribe(topic string, handler SubscribeHandler) error
-	DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error
 	SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error
+	DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error
 }
 
 const (

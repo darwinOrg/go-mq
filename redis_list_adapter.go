@@ -67,6 +67,10 @@ func (a *redisListAdapter) Subscribe(topic string, handler SubscribeHandler) err
 	return nil
 }
 
+func (a *redisListAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
+	return a.DynamicSubscribe(ctx, closeCh, topic, handler)
+}
+
 func (a *redisListAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	go func() {
 		for {
@@ -81,10 +85,6 @@ func (a *redisListAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan s
 	}()
 
 	return nil
-}
-
-func (a *redisListAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	return a.DynamicSubscribe(ctx, closeCh, topic, handler)
 }
 
 func (a *redisListAdapter) subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) {
