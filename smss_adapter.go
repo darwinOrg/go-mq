@@ -131,12 +131,25 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	return err
 }
 
-func (a *smssAdapter) Subscribe(topic string, handler SubscribeHandler) error {
-	return a.createTopicAndSubscribe(&dgctx.DgContext{TraceId: uuid.NewString()}, nil, topic, 0, handler)
-}
+func (a *smssAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error) {
+	if ctx == nil {
+		ctx = &dgctx.DgContext{TraceId: uuid.NewString()}
+	}
+	err := a.createTopic(ctx, topic, 0)
+	if err != nil {
+		return nil, err
+	}
 
-func (a *smssAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	return a.createTopicAndSubscribe(ctx, closeCh, topic, 0, handler)
+	end := new(atomic.Bool)
+	end.Store(false)
+
+	subLock := NewRedisSubLock(a.redisCli, true)
+	dLockSub := client.NewDLockSub(topic, a.group, a.host, a.port, a.timeout, subLock)
+
+	eventId, subFunc := a.getEventIdAndSubFunc(ctx, nil, topic, 0, handler, end)
+	_ = dLockSub.Sub(eventId, a.batchSize, a.timeout, subFunc, nil)
+
+	return subLock.Shutdown, nil
 }
 
 func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
@@ -158,17 +171,22 @@ func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 	return nil
 }
 
-func (a *smssAdapter) createTopicAndSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, lifeDuration time.Duration, handler SubscribeHandler) error {
+func (a *smssAdapter) createTopicAndSubscribe(ctx *dgctx.DgContext, topic string, lifeDuration time.Duration, handler SubscribeHandler) (SubscribeEndCallback, error) {
 	err := a.createTopic(ctx, topic, lifeDuration)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	go func() {
-		a.subscribe(ctx, closeCh, topic, lifeDuration, handler)
-	}()
+	end := new(atomic.Bool)
+	end.Store(false)
 
-	return nil
+	subLock := NewRedisSubLock(a.redisCli, true)
+	dLockSub := client.NewDLockSub(topic, a.group, a.host, a.port, a.timeout, subLock)
+
+	eventId, subFunc := a.getEventIdAndSubFunc(ctx, nil, topic, lifeDuration, handler, end)
+	_ = dLockSub.Sub(eventId, a.batchSize, a.timeout, subFunc, nil)
+
+	return subLock.Shutdown, nil
 }
 
 func (a *smssAdapter) newSubClient(ctx *dgctx.DgContext, topic string) (*client.SubClient, error) {
@@ -189,33 +207,6 @@ func (a *smssAdapter) newSubClient(ctx *dgctx.DgContext, topic string) (*client.
 	}
 
 	return subClient, nil
-}
-
-func (a *smssAdapter) subscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, lifeDuration time.Duration, handler SubscribeHandler) {
-	end := new(atomic.Bool)
-	end.Store(false)
-
-	subLock := NewRedisSubLock(a.redisCli, true)
-	defer subLock.Shutdown()
-	dLockSub := client.NewDLockSub(topic, a.group, a.host, a.port, a.timeout, subLock)
-
-	if closeCh != nil {
-		go func() {
-			<-closeCh
-			_ = a.endSub(ctx, topic, end)
-		}()
-	}
-
-	eventId, subFunc := a.getEventIdAndSubFunc(ctx, closeCh, topic, lifeDuration, handler, end)
-	for {
-		err := dLockSub.Sub(eventId, a.batchSize, a.timeout, subFunc, nil)
-		if err == nil {
-			break
-		}
-
-		dglogger.Errorf(ctx, "dLockSub.Sub error | topic: %s | err: %v", topic, err)
-		time.Sleep(time.Second)
-	}
 }
 
 func (a *smssAdapter) dynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, subClient *client.SubClient, topic string, lifeDuration time.Duration, handler SubscribeHandler) {

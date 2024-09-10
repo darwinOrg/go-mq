@@ -37,7 +37,7 @@ func TestRedisStreamAdapter(t *testing.T) {
 }
 
 func TestSmssAdapter(t *testing.T) {
-	redisdk.InitClient("localhost:6379")
+	redisdk.InitClient("localhost:9221")
 	mqAdapter, err := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
 		Type:      dgmq.MqAdapterSmss,
 		Host:      "localhost",
@@ -57,8 +57,7 @@ func TestSmssAdapter(t *testing.T) {
 
 func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	ctx := &dgctx.DgContext{TraceId: "123"}
-	closeCh := make(chan struct{})
-	err := mqAdapter.DynamicSubscribe(ctx, closeCh, topic, func(_ *dgctx.DgContext, message string) error {
+	cb, err := mqAdapter.Subscribe(ctx, topic, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
 		return nil
@@ -73,7 +72,7 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
 
 	time.Sleep(time.Second)
-	close(closeCh)
+	cb()
 	time.Sleep(time.Second)
 	_ = mqAdapter.Destroy(dc, topic)
 }

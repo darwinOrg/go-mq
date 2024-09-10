@@ -5,7 +5,6 @@ import (
 	"github.com/darwinOrg/go-common/utils"
 	dglogger "github.com/darwinOrg/go-logger"
 	redisdk "github.com/darwinOrg/go-redis"
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
@@ -71,23 +70,26 @@ func (a *redisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	return err
 }
 
-func (a *redisStreamAdapter) Subscribe(topic string, handler SubscribeHandler) error {
+func (a *redisStreamAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error) {
 	_, err := a.redisCli.XGroupCreateMkStream(topic, a.group, "$")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	end := false
 	go func() {
 		for {
-			a.subscribe(&dgctx.DgContext{TraceId: uuid.NewString()}, topic, handler)
+			if end {
+				break
+			}
+
+			a.subscribe(ctx, topic, handler)
 		}
 	}()
 
-	return nil
-}
-
-func (a *redisStreamAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	return a.DynamicSubscribe(ctx, closeCh, topic, handler)
+	return func() {
+		end = true
+	}, nil
 }
 
 func (a *redisStreamAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {

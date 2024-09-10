@@ -7,9 +7,12 @@ import (
 	"time"
 )
 
-const RequestIdHeader = "request_id"
+const (
+	RequestIdHeader = "request_id"
+)
 
 type SubscribeHandler func(ctx *dgctx.DgContext, message string) error
+type SubscribeEndCallback func()
 
 type MqAdapter interface {
 	Publisher
@@ -24,8 +27,7 @@ type Publisher interface {
 }
 
 type Subscriber interface {
-	Subscribe(topic string, handler SubscribeHandler) error
-	SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error
+	Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error)
 	DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error
 }
 

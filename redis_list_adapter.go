@@ -5,7 +5,6 @@ import (
 	"github.com/darwinOrg/go-common/utils"
 	dglogger "github.com/darwinOrg/go-logger"
 	redisdk "github.com/darwinOrg/go-redis"
-	"github.com/google/uuid"
 	"time"
 )
 
@@ -57,18 +56,21 @@ func (a *redisListAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	return err
 }
 
-func (a *redisListAdapter) Subscribe(topic string, handler SubscribeHandler) error {
+func (a *redisListAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error) {
+	end := false
 	go func() {
 		for {
-			a.subscribe(&dgctx.DgContext{TraceId: uuid.NewString()}, topic, handler)
+			if end {
+				break
+			}
+
+			a.subscribe(ctx, topic, handler)
 		}
 	}()
 
-	return nil
-}
-
-func (a *redisListAdapter) SemiSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	return a.DynamicSubscribe(ctx, closeCh, topic, handler)
+	return func() {
+		end = true
+	}, nil
 }
 
 func (a *redisListAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
