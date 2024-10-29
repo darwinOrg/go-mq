@@ -276,6 +276,7 @@ func (a *smssAdapter) getEventIdAndSubFunc(ctx *dgctx.DgContext, closeCh chan st
 
 			msgTag := msg.GetHeaderValue(tagHeader)
 			if msgTag != "" && msgTag != tag {
+				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
 				continue
 			}
 
