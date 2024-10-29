@@ -62,6 +62,10 @@ func (a *redisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message
 	return err
 }
 
+func (a *redisStreamAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, message any) error {
+	return a.Publish(ctx, topic+"@"+tag, message)
+}
+
 func (a *redisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	err := a.redisCli.Del(topic)
 	if err != nil {
@@ -92,6 +96,10 @@ func (a *redisStreamAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handl
 	}, nil
 }
 
+func (a *redisStreamAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
+	return a.Subscribe(ctx, topic+"@"+tag, handler)
+}
+
 func (a *redisStreamAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	_, err := a.redisCli.XGroupCreateMkStream(topic, a.group, "$")
 	if err != nil {
@@ -110,6 +118,10 @@ func (a *redisStreamAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan
 		}
 	}()
 
+	return nil
+}
+
+func (a *redisStreamAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
 	return nil
 }
 

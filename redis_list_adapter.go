@@ -48,6 +48,10 @@ func (a *redisListAdapter) Publish(ctx *dgctx.DgContext, topic string, message a
 	return err
 }
 
+func (a *redisListAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, message any) error {
+	return a.Publish(ctx, topic+"@"+tag, message)
+}
+
 func (a *redisListAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	err := a.redisCli.Del(topic)
 	if err != nil {
@@ -73,6 +77,10 @@ func (a *redisListAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler
 	}, nil
 }
 
+func (a *redisListAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
+	return a.Subscribe(ctx, topic+"@"+tag, handler)
+}
+
 func (a *redisListAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
 	go func() {
 		for {
@@ -86,6 +94,10 @@ func (a *redisListAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan s
 		}
 	}()
 
+	return nil
+}
+
+func (a *redisListAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
 	return nil
 }
 

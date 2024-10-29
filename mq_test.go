@@ -37,7 +37,7 @@ func TestRedisStreamAdapter(t *testing.T) {
 }
 
 func TestSmssAdapter(t *testing.T) {
-	redisdk.InitClient("localhost:9221")
+	redisdk.InitClient("localhost:6379")
 	mqAdapter, err := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
 		Type:      dgmq.MqAdapterSmss,
 		Host:      "localhost",
@@ -57,7 +57,17 @@ func TestSmssAdapter(t *testing.T) {
 
 func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	ctx := &dgctx.DgContext{TraceId: "123"}
-	cb, err := mqAdapter.Subscribe(ctx, topic, func(_ *dgctx.DgContext, message string) error {
+	tag1 := "tag1"
+	tag2 := "tag2"
+	cb1, err := mqAdapter.SubscribeWithTag(ctx, topic, tag1, func(_ *dgctx.DgContext, message string) error {
+		log.Print(message)
+
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	cb2, err := mqAdapter.SubscribeWithTag(ctx, topic, tag2, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
 		return nil
@@ -67,12 +77,15 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	}
 
 	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
-	_ = mqAdapter.Publish(dc, topic, "hello")
-	_ = mqAdapter.Publish(dc, topic, []byte("world"))
-	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
+	_ = mqAdapter.PublishWithTag(dc, topic, tag1, "hello")
+	_ = mqAdapter.PublishWithTag(dc, topic, tag1, []byte("world"))
+	_ = mqAdapter.PublishWithTag(dc, topic, tag2, map[string]string{"haha": "hehe"})
 
 	time.Sleep(time.Second)
-	cb()
+	cb1()
+	cb2()
 	time.Sleep(time.Second)
 	_ = mqAdapter.Destroy(dc, topic)
+	_ = mqAdapter.CleanTag(dc, topic, tag1)
+	_ = mqAdapter.CleanTag(dc, topic, tag2)
 }
