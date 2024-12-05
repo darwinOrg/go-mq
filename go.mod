@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/darwinOrg/go-common v0.1.72
 	github.com/darwinOrg/go-logger v0.0.9
-	github.com/darwinOrg/go-redis v0.0.20
+	github.com/darwinOrg/go-redis v0.0.21
 	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/rolandhe/smss-client v0.0.8
