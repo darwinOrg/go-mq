@@ -37,6 +37,7 @@ type Subscriber interface {
 const (
 	MqAdapterRedisList   = "redis_list"
 	MqAdapterRedisStream = "redis_stream"
+	MqAdapterNats        = "nats"
 	MqAdapterSmss        = "smss"
 )
 
@@ -44,6 +45,8 @@ type MqAdapterConfig struct {
 	Type      string        `json:"type" mapstructure:"type"`
 	Host      string        `json:"host" mapstructure:"host"`
 	Port      int           `json:"port" mapstructure:"port"`
+	Username  string        `json:"username" mapstructure:"username"`
+	Password  string        `json:"password" mapstructure:"password"`
 	Timeout   time.Duration `json:"timeout" mapstructure:"timeout"`
 	PoolSize  int           `json:"poolSize" mapstructure:"poolSize"`
 	Group     string        `json:"group" mapstructure:"group"`
@@ -58,6 +61,8 @@ func NewMqAdapter(config *MqAdapterConfig) (MqAdapter, error) {
 		mqAdapter = NewRedisListAdapter(redisdk.GetDefaultRedisCli(), config)
 	case MqAdapterRedisStream:
 		mqAdapter = NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), config)
+	case MqAdapterNats:
+		mqAdapter = NewNatsAdapter(redisdk.GetDefaultRedisCli(), config)
 	case MqAdapterSmss:
 		var err error
 		mqAdapter, err = NewSmssAdapter(redisdk.GetDefaultRedisCli(), config)
