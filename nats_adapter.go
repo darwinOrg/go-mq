@@ -42,35 +42,14 @@ func (a *natsAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
 }
 
 func (a *natsAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
-	var data []byte
-	switch message.(type) {
-	case string:
-		data = []byte(message.(string))
-	case []byte:
-		data = message.([]byte)
-	default:
-		jsonMsg, err := utils.ConvertBeanToJsonString(message)
-		if err != nil {
-			dglogger.Errorf(ctx, "ConvertBeanToJsonString error | topic: %s | err: %v", topic, err)
-			return err
-		}
-
-		data = []byte(jsonMsg)
-	}
-
-	subject := &dgnats.NatsSubject{
-		Category: topic,
-		Group:    a.group,
-	}
-	err := dgnats.PublishRaw(ctx, subject, data)
-	if err != nil {
-		dglogger.Errorf(ctx, "dgnats.PublishRaw error | topic: %s | err: %v", topic, err)
-	}
-
-	return err
+	return a.PublishWithTag(ctx, topic, "", message)
 }
 
 func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, message any) error {
+	if tag == "" {
+		tag = "default"
+	}
+
 	var data []byte
 	switch message.(type) {
 	case string:
@@ -101,28 +80,51 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 }
 
 func (a *natsAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	return nil
+	return dgnats.DeleteStream(ctx, topic)
 }
 
 func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error) {
-	return func() {
-	}, nil
+	return a.SubscribeWithTag(ctx, topic, "", handler)
 }
 
 func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
-	return a.Subscribe(ctx, topic+"@"+tag, handler)
+	if tag == "" {
+		tag = "default"
+	}
+
+	subject := &dgnats.NatsSubject{
+		Category: topic,
+		Name:     tag,
+		Group:    a.group,
+	}
+
+	dgnats.SubscribeRaw(ctx, subject, func(ctx *dgctx.DgContext, bytes []byte) error {
+		return handler(ctx, string(bytes))
+	})
+
+	return func() {}, nil
 }
 
 func (a *natsAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
-	return nil
+	if closeCh != nil {
+		go func() {
+			<-closeCh
+			dglogger.Infof(ctx, "closed topic: %s ", topic)
+		}()
+	}
+
+	_, err := a.Subscribe(ctx, topic, handler)
+	return err
 }
 
 func (a *natsAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
-	return nil
-}
+	subject := &dgnats.NatsSubject{
+		Category: topic,
+		Name:     tag,
+		Group:    a.group,
+	}
 
-func (a *natsAdapter) subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) {
-
+	return dgnats.Unsubscribe(ctx, subject)
 }
 
 func (a *natsAdapter) Close() {

@@ -62,7 +62,7 @@ func NewMqAdapter(config *MqAdapterConfig) (MqAdapter, error) {
 	case MqAdapterRedisStream:
 		mqAdapter = NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), config)
 	case MqAdapterNats:
-		mqAdapter = NewNatsAdapter(redisdk.GetDefaultRedisCli(), config)
+		mqAdapter = NewNatsAdapter(config)
 	case MqAdapterSmss:
 		var err error
 		mqAdapter, err = NewSmssAdapter(redisdk.GetDefaultRedisCli(), config)

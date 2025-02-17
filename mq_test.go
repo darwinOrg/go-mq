@@ -55,6 +55,24 @@ func TestSmssAdapter(t *testing.T) {
 	pubAndSub(mqAdapter, "smss_topic")
 }
 
+func TestNatsAdapter(t *testing.T) {
+	mqAdapter, err := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
+		Type:      dgmq.MqAdapterNats,
+		Host:      "localhost",
+		Port:      4222,
+		Timeout:   time.Second * 5,
+		PoolSize:  20,
+		Group:     "test",
+		BatchSize: 10,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer mqAdapter.Close()
+
+	pubAndSub(mqAdapter, "nats_topic")
+}
+
 func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	ctx := &dgctx.DgContext{TraceId: "123"}
 	tag1 := "tag1"
@@ -85,7 +103,7 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	cb1()
 	cb2()
 	time.Sleep(time.Second)
-	_ = mqAdapter.Destroy(dc, topic)
 	_ = mqAdapter.CleanTag(dc, topic, tag1)
 	_ = mqAdapter.CleanTag(dc, topic, tag2)
+	_ = mqAdapter.Destroy(dc, topic)
 }
