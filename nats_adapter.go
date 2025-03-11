@@ -73,7 +73,7 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 		Name:     buildNatsSubjectName(topic, tag),
 		Group:    a.group,
 	}
-	err := dgnats.PublishRaw(ctx, subject, data)
+	err := dgnats.PublishRawWithTag(ctx, subject, tag, data)
 	if err != nil {
 		dglogger.Errorf(ctx, "dgnats.PublishRaw error | topic: %s | err: %v", topic, err)
 	}
@@ -96,7 +96,7 @@ func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, 
 		Group:    a.group,
 	}
 
-	dgnats.SubscribeRaw(ctx, subject, func(ctx *dgctx.DgContext, bytes []byte) error {
+	dgnats.SubscribeRawWithTag(ctx, subject, tag, func(ctx *dgctx.DgContext, bytes []byte) error {
 		return handler(ctx, string(bytes))
 	})
 
