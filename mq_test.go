@@ -64,6 +64,8 @@ func TestNatsAdapter(t *testing.T) {
 		PoolSize:  20,
 		Group:     "test",
 		BatchSize: 10,
+		Username:  "startrek_mq",
+		Password:  "cswjggljrmpypwfccarzpjxG-urepqldkhecvnzxzmngotaqs-bkwdvjgipruectqcowoqb6nj",
 	})
 	if err != nil {
 		panic(err)

@@ -40,7 +40,7 @@ func NewNatsAdapter(config *MqAdapterConfig) MqAdapter {
 func (a *natsAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
 	subject := &dgnats.NatsSubject{
 		Category: topic,
-		Name:     "default",
+		Name:     buildDefaultNatsTagWhenEmpty(topic),
 		Group:    a.group,
 	}
 
@@ -53,7 +53,7 @@ func (a *natsAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) e
 
 func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, message any) error {
 	if tag == "" {
-		tag = "default"
+		tag = buildDefaultNatsTagWhenEmpty(topic)
 	}
 
 	var data []byte
@@ -95,7 +95,7 @@ func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler Subs
 
 func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
 	if tag == "" {
-		tag = "default"
+		tag = buildDefaultNatsTagWhenEmpty(topic)
 	}
 
 	subject := &dgnats.NatsSubject{
@@ -135,4 +135,8 @@ func (a *natsAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
 
 func (a *natsAdapter) Close() {
 	dgnats.Close()
+}
+
+func buildDefaultNatsTagWhenEmpty(topic string) string {
+	return fmt.Sprintf("%s_default", topic)
 }
