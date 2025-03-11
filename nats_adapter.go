@@ -38,7 +38,12 @@ func NewNatsAdapter(config *MqAdapterConfig) MqAdapter {
 }
 
 func (a *natsAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
-	return nil
+	subject := &dgnats.NatsSubject{
+		Category: topic,
+		Group:    a.group,
+	}
+
+	return dgnats.InitStream(ctx, subject)
 }
 
 func (a *natsAdapter) Publish(ctx *dgctx.DgContext, topic string, message any) error {
