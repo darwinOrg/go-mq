@@ -40,6 +40,7 @@ func NewNatsAdapter(config *MqAdapterConfig) MqAdapter {
 func (a *natsAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
 	subject := &dgnats.NatsSubject{
 		Category: topic,
+		Name:     "default",
 		Group:    a.group,
 	}
 
