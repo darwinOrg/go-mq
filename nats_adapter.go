@@ -83,7 +83,7 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 }
 
 func (a *natsAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	return dgnats.DeleteStream(ctx, topic)
+	return dgnats.DeleteStream(ctx, buildNatsCategory(topic))
 }
 
 func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error) {
