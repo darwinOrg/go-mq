@@ -8,6 +8,7 @@ import (
 	dglogger "github.com/darwinOrg/go-logger"
 	dgnats "github.com/darwinOrg/go-nats"
 	"os"
+	"strings"
 )
 
 type natsAdapter struct {
@@ -39,7 +40,7 @@ func NewNatsAdapter(config *MqAdapterConfig) MqAdapter {
 
 func (a *natsAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
 	subject := &dgnats.NatsSubject{
-		Category: topic,
+		Category: buildNatsCategory(topic),
 		Name:     buildNatsSubjectName(topic, ""),
 		Group:    a.group,
 	}
@@ -69,7 +70,7 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 	}
 
 	subject := &dgnats.NatsSubject{
-		Category: topic,
+		Category: buildNatsCategory(topic),
 		Name:     buildNatsSubjectName(topic, tag),
 		Group:    a.group,
 	}
@@ -91,7 +92,7 @@ func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler Subs
 
 func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
 	subject := &dgnats.NatsSubject{
-		Category: topic,
+		Category: buildNatsCategory(topic),
 		Name:     buildNatsSubjectName(topic, tag),
 		Group:    a.group,
 	}
@@ -117,7 +118,7 @@ func (a *natsAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 
 func (a *natsAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
 	subject := &dgnats.NatsSubject{
-		Category: topic,
+		Category: buildNatsCategory(topic),
 		Name:     buildNatsSubjectName(topic, tag),
 		Group:    a.group,
 	}
@@ -129,10 +130,14 @@ func (a *natsAdapter) Close() {
 	dgnats.Close()
 }
 
+func buildNatsCategory(topic string) string {
+	return strings.ReplaceAll(topic, ".", "_")
+}
+
 func buildNatsSubjectName(topic, tag string) string {
 	if tag == "" {
 		tag = "topic"
 	}
 
-	return fmt.Sprintf("%s_%s", topic, tag)
+	return strings.ReplaceAll(fmt.Sprintf("%s_%s", topic, tag), ".", "_")
 }
