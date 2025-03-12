@@ -43,7 +43,7 @@ func TestSmssAdapter(t *testing.T) {
 		Host:      "localhost",
 		Port:      12301,
 		Timeout:   time.Second * 5,
-		PoolSize:  20,
+		PoolSize:  2,
 		Group:     "test",
 		BatchSize: 10,
 	})
@@ -61,7 +61,7 @@ func TestNatsAdapter(t *testing.T) {
 		Host:      "localhost",
 		Port:      4222,
 		Timeout:   time.Second * 5,
-		PoolSize:  20,
+		PoolSize:  2,
 		Group:     "test",
 		BatchSize: 10,
 		Username:  "startrek_mq",

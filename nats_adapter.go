@@ -134,5 +134,5 @@ func buildNatsSubjectName(topic, tag string) string {
 		tag = "topic"
 	}
 
-	return fmt.Sprintf("%s.%s", topic, tag)
+	return fmt.Sprintf("%s_%s", topic, tag)
 }
