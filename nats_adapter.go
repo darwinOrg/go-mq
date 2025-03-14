@@ -38,11 +38,7 @@ func NewNatsAdapter(config *MqAdapterConfig) MqAdapter {
 }
 
 func (a *natsAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
-	subject := &dgnats.NatsSubject{
-		Category: buildNatsCategory(topic),
-		Name:     buildNatsCategory(topic),
-		Group:    a.group,
-	}
+	subject := a.buildNatsSubject(topic)
 
 	return dgnats.InitStream(ctx, subject)
 }
@@ -68,11 +64,7 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 		data = []byte(jsonMsg)
 	}
 
-	subject := &dgnats.NatsSubject{
-		Category: buildNatsCategory(topic),
-		Name:     buildNatsCategory(topic),
-		Group:    a.group,
-	}
+	subject := a.buildNatsSubject(topic)
 	err := dgnats.PublishRawWithTag(ctx, subject, tag, data)
 	if err != nil {
 		dglogger.Errorf(ctx, "dgnats.PublishRaw error | topic: %s | err: %v", topic, err)
@@ -82,7 +74,8 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 }
 
 func (a *natsAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	return dgnats.DeleteStream(ctx, buildNatsCategory(topic))
+	subject := a.buildNatsSubject(topic)
+	return dgnats.DeleteStream(ctx, subject.Category)
 }
 
 func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error) {
@@ -90,11 +83,7 @@ func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler Subs
 }
 
 func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
-	subject := &dgnats.NatsSubject{
-		Category: buildNatsCategory(topic),
-		Name:     buildNatsCategory(topic),
-		Group:    a.group,
-	}
+	subject := a.buildNatsSubject(topic)
 
 	dgnats.SubscribeRawWithTag(ctx, subject, tag, func(ctx *dgctx.DgContext, bytes []byte) error {
 		return handler(ctx, string(bytes))
@@ -116,11 +105,7 @@ func (a *natsAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 }
 
 func (a *natsAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
-	subject := &dgnats.NatsSubject{
-		Category: buildNatsCategory(topic),
-		Name:     buildNatsCategory(topic),
-		Group:    a.group,
-	}
+	subject := a.buildNatsSubject(topic)
 
 	return dgnats.Unsubscribe(ctx, subject, tag)
 }
@@ -129,6 +114,12 @@ func (a *natsAdapter) Close() {
 	dgnats.Close()
 }
 
-func buildNatsCategory(topic string) string {
-	return dgnats.ReplaceIllegalCharacter(topic)
+func (a *natsAdapter) buildNatsSubject(topic string) *dgnats.NatsSubject {
+	name := dgnats.ReplaceIllegalCharacter(topic)
+
+	return &dgnats.NatsSubject{
+		Category: name,
+		Name:     name,
+		Group:    a.group,
+	}
 }
