@@ -40,7 +40,7 @@ func NewNatsAdapter(config *MqAdapterConfig) MqAdapter {
 func (a *natsAdapter) CreateTopic(ctx *dgctx.DgContext, topic string) error {
 	subject := &dgnats.NatsSubject{
 		Category: buildNatsCategory(topic),
-		Name:     buildNatsSubjectName(topic, ""),
+		Name:     buildNatsCategory(topic),
 		Group:    a.group,
 	}
 
@@ -70,7 +70,7 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 
 	subject := &dgnats.NatsSubject{
 		Category: buildNatsCategory(topic),
-		Name:     buildNatsSubjectName(topic, tag),
+		Name:     buildNatsCategory(topic),
 		Group:    a.group,
 	}
 	err := dgnats.PublishRawWithTag(ctx, subject, tag, data)
@@ -92,7 +92,7 @@ func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler Subs
 func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
 	subject := &dgnats.NatsSubject{
 		Category: buildNatsCategory(topic),
-		Name:     buildNatsSubjectName(topic, tag),
+		Name:     buildNatsCategory(topic),
 		Group:    a.group,
 	}
 
@@ -118,7 +118,7 @@ func (a *natsAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 func (a *natsAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
 	subject := &dgnats.NatsSubject{
 		Category: buildNatsCategory(topic),
-		Name:     buildNatsSubjectName(topic, tag),
+		Name:     buildNatsCategory(topic),
 		Group:    a.group,
 	}
 
@@ -131,12 +131,4 @@ func (a *natsAdapter) Close() {
 
 func buildNatsCategory(topic string) string {
 	return dgnats.ReplaceIllegalCharacter(topic)
-}
-
-func buildNatsSubjectName(topic, tag string) string {
-	if tag == "" {
-		tag = "topic"
-	}
-
-	return dgnats.ReplaceIllegalCharacter(fmt.Sprintf("%s_%s", topic, tag))
 }
