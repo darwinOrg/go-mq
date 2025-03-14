@@ -8,7 +8,6 @@ import (
 	dglogger "github.com/darwinOrg/go-logger"
 	dgnats "github.com/darwinOrg/go-nats"
 	"os"
-	"strings"
 )
 
 type natsAdapter struct {
@@ -131,7 +130,7 @@ func (a *natsAdapter) Close() {
 }
 
 func buildNatsCategory(topic string) string {
-	return strings.ReplaceAll(topic, ".", "_")
+	return dgnats.ReplaceIllegalCharacter(topic)
 }
 
 func buildNatsSubjectName(topic, tag string) string {
@@ -139,5 +138,5 @@ func buildNatsSubjectName(topic, tag string) string {
 		tag = "topic"
 	}
 
-	return strings.ReplaceAll(fmt.Sprintf("%s_%s", topic, tag), ".", "_")
+	return dgnats.ReplaceIllegalCharacter(fmt.Sprintf("%s_%s", topic, tag))
 }
