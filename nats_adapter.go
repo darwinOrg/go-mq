@@ -123,7 +123,7 @@ func (a *natsAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
 		Group:    a.group,
 	}
 
-	return dgnats.Unsubscribe(ctx, subject)
+	return dgnats.Unsubscribe(ctx, subject, tag)
 }
 
 func (a *natsAdapter) Close() {
