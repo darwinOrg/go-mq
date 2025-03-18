@@ -2,6 +2,7 @@ package dgmq_test
 
 import (
 	dgctx "github.com/darwinOrg/go-common/context"
+	dgsys "github.com/darwinOrg/go-common/sys"
 	dgmq "github.com/darwinOrg/go-mq"
 	redisdk "github.com/darwinOrg/go-redis"
 	"github.com/google/uuid"
@@ -104,7 +105,7 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	time.Sleep(time.Second)
 	cb1()
 	cb2()
-	time.Sleep(time.Second)
+	dgsys.HangupApplication()
 	_ = mqAdapter.CleanTag(dc, topic, tag1)
 	_ = mqAdapter.CleanTag(dc, topic, tag2)
 	_ = mqAdapter.Destroy(dc, topic)
