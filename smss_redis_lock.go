@@ -32,7 +32,6 @@ const luaReleaseScript = `
 `
 
 type redisLocker struct {
-	rClient         redisdk.RedisCli
 	notSupportLua   bool
 	runInMainThread bool
 
@@ -42,28 +41,27 @@ type redisLocker struct {
 // NewSimpleRedisSubLock 创建生成环境中的锁, 所有锁的操作在一个goroutine中执行
 //
 //	notSupportLua 是否支持lua脚本,一些类redis的产品不支持lua，比如 pika
-func NewSimpleRedisSubLock(redisCli redisdk.RedisCli, notSupportLua bool) dlock.SubLock {
-	return NewRedisSubLock(redisCli, notSupportLua)
+func NewSimpleRedisSubLock(notSupportLua bool) dlock.SubLock {
+	return NewRedisSubLock(notSupportLua)
 }
 
 // NewSimpleRedisSubLockInMainThread 与NewSimpleRedisSubLock类似，支持有关所的操作在当前的主goroutine中执行，一般用于测试
-func NewSimpleRedisSubLockInMainThread(redisCli redisdk.RedisCli, notSupportLua bool) dlock.SubLock {
-	return NewRedisSubLockInMainThread(redisCli, notSupportLua)
+func NewSimpleRedisSubLockInMainThread(notSupportLua bool) dlock.SubLock {
+	return NewRedisSubLockInMainThread(notSupportLua)
 }
 
 // NewRedisSubLock 创建redis 锁, 需要指定创建redis客户端的工厂方法，与NewSimpleRedisSubLock类似，所有锁的操作在一个goroutine中执行
-func NewRedisSubLock(redisCli redisdk.RedisCli, notSupportLua bool) dlock.SubLock {
-	return newRedisSubLock(redisCli, notSupportLua, false)
+func NewRedisSubLock(notSupportLua bool) dlock.SubLock {
+	return newRedisSubLock(notSupportLua, false)
 }
 
 // NewRedisSubLockInMainThread 与NewRedisSubLock类似，只是锁操作当当前主goroutine内运行
-func NewRedisSubLockInMainThread(redisCli redisdk.RedisCli, notSupportLua bool) dlock.SubLock {
-	return newRedisSubLock(redisCli, notSupportLua, true)
+func NewRedisSubLockInMainThread(notSupportLua bool) dlock.SubLock {
+	return newRedisSubLock(notSupportLua, true)
 }
 
-func newRedisSubLock(redisCli redisdk.RedisCli, notSupportLua, runInMainThread bool) dlock.SubLock {
+func newRedisSubLock(notSupportLua, runInMainThread bool) dlock.SubLock {
 	return &redisLocker{
-		rClient:         redisCli,
 		notSupportLua:   notSupportLua,
 		runInMainThread: runInMainThread,
 	}
@@ -107,14 +105,14 @@ func (r *redisLocker) release(key string, value string, canRm bool) bool {
 		if !canRm {
 			return false
 		}
-		err := r.rClient.Del(key)
+		_, err := redisdk.Del(key)
 		logger.Infof("redisLocker release(del) %s,err:%v", key, err)
 		if err != nil {
 			return false
 		}
 		return true
 	}
-	val, err := r.rClient.Eval(luaReleaseScript, []string{key}, value)
+	val, err := redisdk.Eval(luaReleaseScript, []string{key}, value)
 	logger.Infof("redisLocker release(Eval script) %s,err:%v", key, err)
 	if err != nil {
 		return false
@@ -129,7 +127,7 @@ func (r *redisLocker) lock(watcherFunc func(event dlock.WatchState)) {
 	for !st.shutdownState.Load() {
 		if sm == 0 {
 			st.record(r.notSupportLua)
-			ok, _ := r.rClient.SetNX(st.key, st.value, lockedLife)
+			ok, _ := redisdk.SetNX(st.key, st.value, lockedLife)
 			timeout := tryLockTimeout
 			if ok {
 				timeout = leaseInterval
@@ -170,20 +168,20 @@ func sleep(d time.Duration, shutdownChan chan struct{}) {
 
 func (r *redisLocker) lease(key, value string) bool {
 	if r.notSupportLua {
-		v, err := r.rClient.Get(key)
+		v, err := redisdk.Get(key)
 		if err != nil {
 			return false
 		}
 		if v != value {
 			return false
 		}
-		cmdRet, err := r.rClient.Expire(key, lockedLife)
+		cmdRet, err := redisdk.Expire(key, lockedLife)
 		if err != nil {
 			return false
 		}
 		return cmdRet
 	}
-	val, err := r.rClient.Eval(luaExtendScript, []string{key}, value, lockedLife.Seconds())
+	val, err := redisdk.Eval(luaExtendScript, []string{key}, value, lockedLife.Seconds())
 	if err != nil {
 		return false
 	}

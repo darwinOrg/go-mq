@@ -22,7 +22,6 @@ const (
 )
 
 type smssAdapter struct {
-	redisCli      redisdk.RedisCli
 	host          string
 	port          int
 	timeout       time.Duration
@@ -32,7 +31,7 @@ type smssAdapter struct {
 	pubClientPool *client.PubClientPool
 }
 
-func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapter, error) {
+func NewSmssAdapter(config *MqAdapterConfig) (MqAdapter, error) {
 	if config.PoolSize < 1 {
 		config.PoolSize = 1
 	}
@@ -43,7 +42,6 @@ func NewSmssAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) (MqAdapt
 	pubClientPool := client.NewPubClientPool(pool.NewDefaultConfig(), config.Host, config.Port, config.Timeout)
 
 	return &smssAdapter{
-		redisCli:      redisCli,
 		host:          config.Host,
 		port:          config.Port,
 		timeout:       config.Timeout,
@@ -135,7 +133,7 @@ func (a *smssAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
-	_ = a.redisCli.Del(a.getSmssEventIdKey(topic))
+	_, _ = redisdk.Del(a.getSmssEventIdKey(topic))
 	return err
 }
 
@@ -155,7 +153,7 @@ func (a *smssAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, 
 	end := new(atomic.Bool)
 	end.Store(false)
 
-	subLock := NewRedisSubLock(a.redisCli, true)
+	subLock := NewRedisSubLock(true)
 	who := utils.IfReturn(tag != "", tag+"@"+a.group, a.group)
 	dLockSub := client.NewDLockSub(topic, who, a.host, a.port, a.timeout, subLock)
 	eventId, subFunc := a.getEventIdAndSubFunc(ctx, nil, topic, tag, 0, handler, end)
@@ -184,7 +182,8 @@ func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 }
 
 func (a *smssAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
-	return a.redisCli.Del(a.getSmssEventIdKey(topic + "@" + tag))
+	_, err := redisdk.Del(a.getSmssEventIdKey(topic + "@" + tag))
+	return err
 }
 
 func (a *smssAdapter) newSubClient(ctx *dgctx.DgContext, topic string) (*client.SubClient, error) {
@@ -257,7 +256,7 @@ func (a *smssAdapter) dynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 func (a *smssAdapter) getEventIdAndSubFunc(ctx *dgctx.DgContext, closeCh chan struct{}, topic, tag string, lifeDuration time.Duration, handler SubscribeHandler, end *atomic.Bool) (int64, client.MessagesAccept) {
 	eventIdKey := a.getSmssEventIdKey(utils.IfReturn(tag != "", topic+"@"+tag, topic))
 	var eventId int64
-	strEventId, err := a.redisCli.Get(eventIdKey)
+	strEventId, err := redisdk.Get(eventIdKey)
 	if err != nil {
 		dglogger.Warnf(ctx, "redisCli get smss eventid error | topic: %s | tag: %s | err: %v", topic, tag, err)
 	} else {
@@ -270,13 +269,13 @@ func (a *smssAdapter) getEventIdAndSubFunc(ctx *dgctx.DgContext, closeCh chan st
 			endHeader := msg.GetHeaderValue(smssEndHeader)
 			if endHeader == "true" {
 				dglogger.Infof(ctx, "smss client receive end message | topic: %s | tag: %s", topic, tag)
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
+				_, _ = redisdk.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
 				return client.AckWithEnd
 			}
 
 			msgTag := msg.GetHeaderValue(tagHeader)
 			if msgTag != "" && msgTag != tag {
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
+				_, _ = redisdk.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
 				continue
 			}
 
@@ -303,7 +302,7 @@ func (a *smssAdapter) getEventIdAndSubFunc(ctx *dgctx.DgContext, closeCh chan st
 			} else {
 				dglogger.Infof(dc, "Handle success | topic: %s | tag: %s | ts: %d | eventId: %d | payload: %s | delayMilli: %d",
 					topic, tag, msg.Ts, msg.EventId, payload, delayMilli)
-				_, _ = a.redisCli.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
+				_, _ = redisdk.Set(eventIdKey, strconv.FormatInt(msg.EventId, 10), lifeDuration)
 			}
 		}
 

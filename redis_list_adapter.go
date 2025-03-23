@@ -9,14 +9,12 @@ import (
 )
 
 type redisListAdapter struct {
-	redisCli redisdk.RedisCli
-	timeout  time.Duration
+	timeout time.Duration
 }
 
-func NewRedisListAdapter(redisCli redisdk.RedisCli, config *MqAdapterConfig) MqAdapter {
+func NewRedisListAdapter(config *MqAdapterConfig) MqAdapter {
 	return &redisListAdapter{
-		redisCli: redisCli,
-		timeout:  config.Timeout,
+		timeout: config.Timeout,
 	}
 }
 
@@ -41,7 +39,7 @@ func (a *redisListAdapter) Publish(ctx *dgctx.DgContext, topic string, message a
 		strMsg = jsonMsg
 	}
 
-	_, err := a.redisCli.LPush(topic, strMsg)
+	_, err := redisdk.LPush(topic, strMsg)
 	if err != nil {
 		dglogger.Errorf(ctx, "Publish error | topic: %s | err: %v", topic, err)
 	}
@@ -53,7 +51,7 @@ func (a *redisListAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag strin
 }
 
 func (a *redisListAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
-	err := a.redisCli.Del(topic)
+	_, err := redisdk.Del(topic)
 	if err != nil {
 		dglogger.Errorf(ctx, "Destroy error | topic: %s | err: %v", topic, err)
 	}
@@ -102,14 +100,14 @@ func (a *redisListAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) err
 }
 
 func (a *redisListAdapter) subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) {
-	rts, readErr := a.redisCli.BRPop(a.timeout, topic)
+	res, readErr := redisdk.BRPop(a.timeout, topic)
 	if readErr != nil {
 		dglogger.Debugf(ctx, "BRPop error | topic: %s | err: %v", topic, readErr)
 		time.Sleep(time.Second)
 		return
 	}
-	if len(rts) == 2 {
-		handlerErr := handler(ctx, rts[1])
+	if res != "" {
+		handlerErr := handler(ctx, res)
 		if handlerErr != nil {
 			dglogger.Errorf(ctx, "Handle error | topic: %s | err: %v", topic, handlerErr)
 		}
