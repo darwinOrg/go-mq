@@ -13,8 +13,8 @@ github.com/darwinOrg/go-common v0.1.81 h1:cRV3fimwzOHfY5e6n0vWWcC1yKIGMajf7EsE6J
 github.com/darwinOrg/go-common v0.1.81/go.mod h1:pItL/4ZV0bU64N2qD9ACpvDlYjeomAbheIzPXKqbb88=
 github.com/darwinOrg/go-logger v0.0.9 h1:6SxIYuqpIG6ARl/bEvWZ3eTRBnN3DYPfj76bxLWbrSc=
 github.com/darwinOrg/go-logger v0.0.9/go.mod h1:Hc2QLNo8gcOoMgk4qoGA69JBe7scvhYgf0mhXYAFd1s=
-github.com/darwinOrg/go-nats v0.0.34 h1:UuyoVcMNuQiL9qztEbI/4YymE9a0B7RBwbOuYsNs97w=
-github.com/darwinOrg/go-nats v0.0.34/go.mod h1:899vDr9xJ7ntQvshpUX4KHivMuzgtO59tmBUMtnjEWM=
+github.com/darwinOrg/go-nats v0.0.35 h1:/Qz40q6lCtS9M2YW3bMUOg2ch024kdUubv6vC1fx+Ys=
+github.com/darwinOrg/go-nats v0.0.35/go.mod h1:899vDr9xJ7ntQvshpUX4KHivMuzgtO59tmBUMtnjEWM=
 github.com/darwinOrg/go-redis v0.0.27 h1:p3zuy7JqsFwkoS88X6SlLfGPrOdDAR/e5DSuiZzSL4Q=
 github.com/darwinOrg/go-redis v0.0.27/go.mod h1:YkhnKI9idFe4hoxVkDjrOHTUFszsJjhxlYXVinhnAmA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
