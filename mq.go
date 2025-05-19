@@ -3,7 +3,6 @@ package dgmq
 import (
 	"errors"
 	dgctx "github.com/darwinOrg/go-common/context"
-	redisdk "github.com/darwinOrg/go-redis"
 	"time"
 )
 
@@ -58,14 +57,14 @@ func NewMqAdapter(config *MqAdapterConfig) (MqAdapter, error) {
 	var mqAdapter MqAdapter
 	switch config.Type {
 	case MqAdapterRedisList:
-		mqAdapter = NewRedisListAdapter(redisdk.GetDefaultRedisCli(), config)
+		mqAdapter = NewRedisListAdapter(config)
 	case MqAdapterRedisStream:
-		mqAdapter = NewRedisStreamAdapter(redisdk.GetDefaultRedisCli(), config)
+		mqAdapter = NewRedisStreamAdapter(config)
 	case MqAdapterNats:
 		mqAdapter = NewNatsAdapter(config)
 	case MqAdapterSmss:
 		var err error
-		mqAdapter, err = NewSmssAdapter(redisdk.GetDefaultRedisCli(), config)
+		mqAdapter, err = NewSmssAdapter(config)
 		if err != nil {
 			return nil, err
 		}

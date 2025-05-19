@@ -96,15 +96,24 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	if err != nil {
 		panic(err)
 	}
+	cb3, err := mqAdapter.Subscribe(ctx, topic, func(_ *dgctx.DgContext, message string) error {
+		log.Print(message)
+
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 
 	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
-	_ = mqAdapter.PublishWithTag(dc, topic, tag1, "hello")
-	_ = mqAdapter.PublishWithTag(dc, topic, tag1, []byte("world"))
-	_ = mqAdapter.PublishWithTag(dc, topic, tag2, map[string]string{"haha": "hehe"})
+	_ = mqAdapter.Publish(dc, topic, "hello")
+	_ = mqAdapter.Publish(dc, topic, []byte("world"))
+	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
 
 	time.Sleep(time.Second)
 	cb1()
 	cb2()
+	cb3()
 	dgsys.HangupApplication()
 	_ = mqAdapter.CleanTag(dc, topic, tag1)
 	_ = mqAdapter.CleanTag(dc, topic, tag2)
