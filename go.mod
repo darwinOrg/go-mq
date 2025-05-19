@@ -8,7 +8,6 @@ require (
 	github.com/darwinOrg/go-nats v0.0.37
 	github.com/darwinOrg/go-redis v0.0.28
 	github.com/google/uuid v1.6.0
-	github.com/redis/go-redis/v9 v9.8.0
 	github.com/rolandhe/smss-client v0.0.8
 )
 
@@ -24,6 +23,7 @@ require (
 	github.com/nats-io/nats.go v1.42.0 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
+	github.com/redis/go-redis/v9 v9.8.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
