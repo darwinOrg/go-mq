@@ -5,7 +5,7 @@ go 1.23.1
 require (
 	github.com/darwinOrg/go-common v0.1.87
 	github.com/darwinOrg/go-logger v0.0.12
-	github.com/darwinOrg/go-nats v0.0.37
+	github.com/darwinOrg/go-nats v0.0.38
 	github.com/darwinOrg/go-redis v0.0.28
 	github.com/google/uuid v1.6.0
 	github.com/rolandhe/smss-client v0.0.8
