@@ -85,11 +85,14 @@ func (a *natsAdapter) Subscribe(ctx *dgctx.DgContext, topic string, handler Subs
 func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error) {
 	subject := a.buildNatsSubject(topic)
 
-	dgnats.SubscribeRawWithTag(ctx, subject, tag, func(ctx *dgctx.DgContext, bytes []byte) error {
+	sub, err := dgnats.SubscribeRawWithTag(ctx, subject, tag, func(ctx *dgctx.DgContext, bytes []byte) error {
 		return handler(ctx, string(bytes))
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return func() {}, nil
+	return func() { _ = sub.Unsubscribe() }, nil
 }
 
 func (a *natsAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error {
@@ -104,7 +107,13 @@ func (a *natsAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 	return err
 }
 
-func (a *natsAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
+func (a *natsAdapter) Unsubscribe(ctx *dgctx.DgContext, topic string) error {
+	subject := a.buildNatsSubject(topic)
+
+	return dgnats.Unsubscribe(ctx, subject, "")
+}
+
+func (a *natsAdapter) UnsubscribeWithTag(ctx *dgctx.DgContext, topic, tag string) error {
 	subject := a.buildNatsSubject(topic)
 
 	return dgnats.Unsubscribe(ctx, subject, tag)

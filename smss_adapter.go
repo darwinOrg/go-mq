@@ -181,7 +181,12 @@ func (a *smssAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct
 	return nil
 }
 
-func (a *smssAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
+func (a *smssAdapter) Unsubscribe(_ *dgctx.DgContext, topic string) error {
+	_, err := redisdk.Del(a.getSmssEventIdKey(topic))
+	return err
+}
+
+func (a *smssAdapter) UnsubscribeWithTag(_ *dgctx.DgContext, topic, tag string) error {
 	_, err := redisdk.Del(a.getSmssEventIdKey(topic + "@" + tag))
 	return err
 }

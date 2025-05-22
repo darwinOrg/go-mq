@@ -15,6 +15,8 @@ github.com/darwinOrg/go-logger v0.0.12 h1:zaH74lUadHmzo/+90/DRASo4XTmdeIgnwYR54i
 github.com/darwinOrg/go-logger v0.0.12/go.mod h1:cP/99H+q2U9jXhpFIWlvNpHvBk0CPQmsDlkvaE7yUy8=
 github.com/darwinOrg/go-nats v0.0.39 h1:h14DNR77/tMzhaw+kk8X20pw+6SL1GqyUBZte98gueA=
 github.com/darwinOrg/go-nats v0.0.39/go.mod h1:M3q5uWg+0Mqm1GHlRI261ztEIGd3lef/1rfCE1YcnmY=
+github.com/darwinOrg/go-nats v0.0.40 h1:Er6ftRAK2HwKtt6vXrMwmQbPU2vIOllPIZ3P9qJ9MoY=
+github.com/darwinOrg/go-nats v0.0.40/go.mod h1:M3q5uWg+0Mqm1GHlRI261ztEIGd3lef/1rfCE1YcnmY=
 github.com/darwinOrg/go-redis v0.0.28 h1:1GPl0Q1yBxUnjrvDAejvjBNnnwyCGpstxibg/a7UPRA=
 github.com/darwinOrg/go-redis v0.0.28/go.mod h1:3B1Vro1L7VZkf27iuysduaAVcfwbxFidTB4H47rNdOU=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

@@ -95,7 +95,11 @@ func (a *redisListAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan s
 	return nil
 }
 
-func (a *redisListAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
+func (a *redisListAdapter) Unsubscribe(_ *dgctx.DgContext, _ string) error {
+	return nil
+}
+
+func (a *redisListAdapter) UnsubscribeWithTag(_ *dgctx.DgContext, _, _ string) error {
 	return nil
 }
 

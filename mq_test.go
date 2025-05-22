@@ -115,7 +115,7 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	cb2()
 	cb3()
 	dgsys.HangupApplication()
-	_ = mqAdapter.CleanTag(dc, topic, tag1)
-	_ = mqAdapter.CleanTag(dc, topic, tag2)
+	_ = mqAdapter.UnsubscribeWithTag(dc, topic, tag1)
+	_ = mqAdapter.UnsubscribeWithTag(dc, topic, tag2)
 	_ = mqAdapter.Destroy(dc, topic)
 }

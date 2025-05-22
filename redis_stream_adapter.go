@@ -115,7 +115,11 @@ func (a *redisStreamAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan
 	return nil
 }
 
-func (a *redisStreamAdapter) CleanTag(ctx *dgctx.DgContext, topic, tag string) error {
+func (a *redisStreamAdapter) Unsubscribe(_ *dgctx.DgContext, _ string) error {
+	return nil
+}
+
+func (a *redisStreamAdapter) UnsubscribeWithTag(_ *dgctx.DgContext, _, _ string) error {
 	return nil
 }
 

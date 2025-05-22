@@ -30,7 +30,8 @@ type Subscriber interface {
 	Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error)
 	SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error)
 	DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error
-	CleanTag(ctx *dgctx.DgContext, topic, tag string) error
+	Unsubscribe(ctx *dgctx.DgContext, topic string) error
+	UnsubscribeWithTag(ctx *dgctx.DgContext, topic, tag string) error
 }
 
 const (
