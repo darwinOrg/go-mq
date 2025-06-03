@@ -64,6 +64,12 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 		data = []byte(jsonMsg)
 	}
 
+	strMsg := string(data)
+	if tag != "" {
+		dglogger.Infof(ctx, "Publish | topic: %s | tag: %s | message: %s", topic, tag, strMsg)
+	} else {
+		dglogger.Infof(ctx, "Publish | topic: %s | message: %s", topic, strMsg)
+	}
 	subject := a.buildNatsSubject(topic)
 	err := dgnats.PublishRawWithTag(ctx, subject, tag, data)
 	if err != nil {
@@ -86,7 +92,13 @@ func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, 
 	subject := a.buildNatsSubject(topic)
 
 	sub, err := dgnats.SubscribeRawWithTag(ctx, subject, tag, func(ctx *dgctx.DgContext, bytes []byte) error {
-		return handler(ctx, string(bytes))
+		message := string(bytes)
+		if tag != "" {
+			dglogger.Infof(ctx, "Subscribe | topic: %s | tag: %s | message: %s", topic, tag, message)
+		} else {
+			dglogger.Infof(ctx, "Subscribe | topic: %s | message: %s", topic, message)
+		}
+		return handler(ctx, message)
 	})
 	if err != nil {
 		return nil, err
