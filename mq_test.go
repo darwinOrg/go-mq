@@ -1,15 +1,15 @@
 package dgmq_test
 
 import (
-	dgctx "github.com/darwinOrg/go-common/context"
-	dgsys "github.com/darwinOrg/go-common/sys"
-	dgmq "github.com/darwinOrg/go-mq"
-	redisdk "github.com/darwinOrg/go-redis"
-	"github.com/google/uuid"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	dgctx "github.com/darwinOrg/go-common/context"
+	dgsys "github.com/darwinOrg/go-common/sys"
+	dgmq "github.com/darwinOrg/go-mq"
+	redisdk "github.com/darwinOrg/go-redis"
 )
 
 func TestRedisListAdapter(t *testing.T) {
@@ -35,25 +35,6 @@ func TestRedisStreamAdapter(t *testing.T) {
 	defer mqAdapter.Close()
 
 	pubAndSub(mqAdapter, "redis_stream_topic")
-}
-
-func TestSmssAdapter(t *testing.T) {
-	redisdk.InitClient("localhost:6379")
-	mqAdapter, err := dgmq.NewMqAdapter(&dgmq.MqAdapterConfig{
-		Type:      dgmq.MqAdapterSmss,
-		Host:      "localhost",
-		Port:      12301,
-		Timeout:   time.Second * 5,
-		PoolSize:  2,
-		Group:     "test",
-		BatchSize: 10,
-	})
-	if err != nil {
-		panic(err)
-	}
-	defer mqAdapter.Close()
-
-	pubAndSub(mqAdapter, "smss_topic")
 }
 
 func TestNatsAdapter(t *testing.T) {
@@ -105,7 +86,7 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 		panic(err)
 	}
 
-	dc := &dgctx.DgContext{TraceId: uuid.NewString()}
+	dc := dgctx.SimpleDgContext()
 	_ = mqAdapter.Publish(dc, topic, "hello")
 	_ = mqAdapter.Publish(dc, topic, []byte("world"))
 	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
@@ -115,7 +96,5 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	cb2()
 	cb3()
 	dgsys.HangupApplication()
-	_ = mqAdapter.UnsubscribeWithTag(dc, topic, tag1)
-	_ = mqAdapter.UnsubscribeWithTag(dc, topic, tag2)
 	_ = mqAdapter.Destroy(dc, topic)
 }

@@ -2,8 +2,9 @@ package dgmq
 
 import (
 	"errors"
-	dgctx "github.com/darwinOrg/go-common/context"
 	"time"
+
+	dgctx "github.com/darwinOrg/go-common/context"
 )
 
 const (
@@ -38,7 +39,6 @@ const (
 	MqAdapterRedisList   = "redis_list"
 	MqAdapterRedisStream = "redis_stream"
 	MqAdapterNats        = "nats"
-	MqAdapterSmss        = "smss"
 )
 
 type MqAdapterConfig struct {
@@ -63,12 +63,6 @@ func NewMqAdapter(config *MqAdapterConfig) (MqAdapter, error) {
 		mqAdapter = NewRedisStreamAdapter(config)
 	case MqAdapterNats:
 		mqAdapter = NewNatsAdapter(config)
-	case MqAdapterSmss:
-		var err error
-		mqAdapter, err = NewSmssAdapter(config)
-		if err != nil {
-			return nil, err
-		}
 	default:
 		return nil, errors.New("错误的类型")
 	}
