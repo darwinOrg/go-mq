@@ -3,9 +3,9 @@ module github.com/darwinOrg/go-mq
 go 1.23.1
 
 require (
-	github.com/darwinOrg/go-common v0.2.16
+	github.com/darwinOrg/go-common v0.2.17
 	github.com/darwinOrg/go-logger v0.0.15
-	github.com/darwinOrg/go-nats v0.0.43
+	github.com/darwinOrg/go-nats v0.0.44
 	github.com/darwinOrg/go-redis v0.0.32
 )
 
