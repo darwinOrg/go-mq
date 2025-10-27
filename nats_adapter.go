@@ -2,12 +2,13 @@ package dgmq
 
 import (
 	"fmt"
+	"os"
+
 	dgctx "github.com/darwinOrg/go-common/context"
 	dgsys "github.com/darwinOrg/go-common/sys"
 	"github.com/darwinOrg/go-common/utils"
 	dglogger "github.com/darwinOrg/go-logger"
 	dgnats "github.com/darwinOrg/go-nats"
-	"os"
 )
 
 type natsAdapter struct {
