@@ -58,9 +58,10 @@ func TestNatsAdapter(t *testing.T) {
 }
 
 func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
-	ctx := &dgctx.DgContext{TraceId: "123"}
+	ctx := dgctx.SimpleDgContext()
 	tag1 := "tag1"
 	tag2 := "tag2"
+
 	cb1, err := mqAdapter.SubscribeWithTag(ctx, topic, tag1, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
@@ -69,6 +70,7 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	if err != nil {
 		panic(err)
 	}
+
 	cb2, err := mqAdapter.SubscribeWithTag(ctx, topic, tag2, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
@@ -77,6 +79,7 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	if err != nil {
 		panic(err)
 	}
+
 	cb3, err := mqAdapter.Subscribe(ctx, topic, func(_ *dgctx.DgContext, message string) error {
 		log.Print(message)
 
@@ -91,10 +94,29 @@ func pubAndSub(mqAdapter dgmq.MqAdapter, topic string) {
 	_ = mqAdapter.Publish(dc, topic, []byte("world"))
 	_ = mqAdapter.Publish(dc, topic, map[string]string{"haha": "hehe"})
 
-	time.Sleep(time.Second)
+	dgsys.HangupApplication()
 	cb1()
 	cb2()
 	cb3()
+	_ = mqAdapter.Destroy(dc, topic)
+}
+
+func delay(mqAdapter dgmq.MqAdapter, topic string) {
+	ctx := dgctx.SimpleDgContext()
+
+	cb, err := mqAdapter.SubscribeDelay(ctx, topic, time.Second, func(_ *dgctx.DgContext, message string) error {
+		log.Print(message)
+
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	dc := dgctx.SimpleDgContext()
+	_ = mqAdapter.PublishDelay(dc, topic, map[string]string{"delay": "later"}, 5*time.Second)
+
 	dgsys.HangupApplication()
+	cb()
 	_ = mqAdapter.Destroy(dc, topic)
 }

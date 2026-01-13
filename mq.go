@@ -23,6 +23,7 @@ type Publisher interface {
 	CreateTopic(ctx *dgctx.DgContext, topic string) error
 	Publish(ctx *dgctx.DgContext, topic string, message any) error
 	PublishWithTag(ctx *dgctx.DgContext, topic, tag string, message any) error
+	PublishDelay(ctx *dgctx.DgContext, topic string, message any, delay time.Duration) error
 	Destroy(ctx *dgctx.DgContext, topic string) error
 	Close()
 }
@@ -31,6 +32,7 @@ type Subscriber interface {
 	Subscribe(ctx *dgctx.DgContext, topic string, handler SubscribeHandler) (SubscribeEndCallback, error)
 	SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, handler SubscribeHandler) (SubscribeEndCallback, error)
 	DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan struct{}, topic string, handler SubscribeHandler) error
+	SubscribeDelay(ctx *dgctx.DgContext, topic string, sleepDuration time.Duration, handler SubscribeHandler) (SubscribeEndCallback, error)
 	Unsubscribe(ctx *dgctx.DgContext, topic string) error
 	UnsubscribeWithTag(ctx *dgctx.DgContext, topic, tag string) error
 }

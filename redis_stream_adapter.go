@@ -1,11 +1,12 @@
 package dgmq
 
 import (
+	"time"
+
 	dgctx "github.com/darwinOrg/go-common/context"
 	"github.com/darwinOrg/go-common/utils"
 	dglogger "github.com/darwinOrg/go-logger"
 	redisdk "github.com/darwinOrg/go-redis"
-	"time"
 )
 
 const (
@@ -58,6 +59,11 @@ func (a *redisStreamAdapter) Publish(ctx *dgctx.DgContext, topic string, message
 
 func (a *redisStreamAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, message any) error {
 	return a.Publish(ctx, topic+"@"+tag, message)
+}
+
+func (a *redisStreamAdapter) PublishDelay(ctx *dgctx.DgContext, topic string, message any, delay time.Duration) error {
+	// TODO
+	return nil
 }
 
 func (a *redisStreamAdapter) Destroy(ctx *dgctx.DgContext, topic string) error {
@@ -113,6 +119,10 @@ func (a *redisStreamAdapter) DynamicSubscribe(ctx *dgctx.DgContext, closeCh chan
 	}()
 
 	return nil
+}
+
+func (a *redisStreamAdapter) SubscribeDelay(ctx *dgctx.DgContext, topic string, sleepDuration time.Duration, handler SubscribeHandler) (SubscribeEndCallback, error) {
+	return nil, nil
 }
 
 func (a *redisStreamAdapter) Unsubscribe(_ *dgctx.DgContext, _ string) error {
