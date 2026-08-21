@@ -5,6 +5,7 @@ import (
 	"time"
 
 	dgctx "github.com/darwinOrg/go-common/context"
+	dglogger "github.com/darwinOrg/go-logger"
 )
 
 const RequestIdHeader = "request_id"
@@ -68,4 +69,8 @@ func NewMqAdapter(config *MqAdapterConfig) (MqAdapter, error) {
 	}
 
 	return mqAdapter, nil
+}
+
+func init() {
+	dglogger.AppendIgnoreCallerFlags("go-mq(@[\\w.]+)?/([\\w.]+)?.go$")
 }
