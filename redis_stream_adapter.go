@@ -9,9 +9,7 @@ import (
 	redisdk "github.com/darwinOrg/go-redis"
 )
 
-const (
-	defaultRedisStreamKey = "###redis_stream###"
-)
+const defaultRedisStreamKey = "###redis_stream###"
 
 type redisStreamAdapter struct {
 	group    string

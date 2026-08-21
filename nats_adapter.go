@@ -53,11 +53,6 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 	if err != nil {
 		return err
 	}
-	if tag != "" {
-		dglogger.Infof(ctx, "Publish | topic: %s | tag: %s | message: %s", topic, tag, string(msgData))
-	} else {
-		dglogger.Infof(ctx, "Publish | topic: %s | message: %s", topic, string(msgData))
-	}
 
 	subject := a.buildNatsSubject(topic)
 	err = dgnats.PublishRawWithTag(ctx, subject, tag, msgData)
@@ -69,14 +64,8 @@ func (a *natsAdapter) PublishWithTag(ctx *dgctx.DgContext, topic, tag string, me
 }
 
 func (a *natsAdapter) PublishDelay(ctx *dgctx.DgContext, topic string, message any, delay time.Duration) error {
-	msgData, err := dgnats.ToBytes(ctx, message)
-	if err != nil {
-		return err
-	}
-	dglogger.Infof(ctx, "PublishDelay | topic: %s | message: %s | delay: %d", topic, string(msgData), delay)
-
 	subject := a.buildNatsSubject(topic)
-	err = dgnats.PublishDelay(ctx, subject, message, delay)
+	err := dgnats.PublishDelay(ctx, subject, message, delay)
 	if err != nil {
 		dglogger.Errorf(ctx, "dgnats.PublishDelay error | topic: %s | err: %v", topic, err)
 	}
@@ -98,11 +87,6 @@ func (a *natsAdapter) SubscribeWithTag(ctx *dgctx.DgContext, topic, tag string, 
 
 	sub, err := dgnats.SubscribeWithTag(ctx, subject, tag, func(ctx *dgctx.DgContext, bytes []byte) error {
 		message := string(bytes)
-		if tag != "" {
-			dglogger.Infof(ctx, "Subscribe | topic: %s | tag: %s | message: %s", topic, tag, message)
-		} else {
-			dglogger.Infof(ctx, "Subscribe | topic: %s | message: %s", topic, message)
-		}
 		return handler(ctx, message)
 	})
 	if err != nil {
@@ -129,7 +113,6 @@ func (a *natsAdapter) SubscribeDelay(ctx *dgctx.DgContext, topic string, sleepDu
 
 	sub, err := dgnats.SubscribeDelay(ctx, subject, sleepDuration, func(ctx *dgctx.DgContext, bytes []byte) error {
 		message := string(bytes)
-		dglogger.Infof(ctx, "Subscribe | topic: %s | message: %s", topic, message)
 		return handler(ctx, message)
 	})
 	if err != nil {

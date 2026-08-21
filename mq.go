@@ -7,9 +7,7 @@ import (
 	dgctx "github.com/darwinOrg/go-common/context"
 )
 
-const (
-	RequestIdHeader = "request_id"
-)
+const RequestIdHeader = "request_id"
 
 type SubscribeHandler func(ctx *dgctx.DgContext, message string) error
 type SubscribeEndCallback func()
